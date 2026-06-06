@@ -1,54 +1,72 @@
 package structures;
 
 public class CustomHashMap<K, V> implements Map<K, V> {
-    
+
     public static class Entry<K, V> {
+
         private K key;
         private V value;
-        
+
         public Entry(K key, V value) {
             this.key = key;
             this.value = value;
         }
-        public K getKey() { return key; }
-        public V getValue() { return value; }
-        public void setValue(V value) { this.value = value; }
-        
+
+        public K getKey() {
+            return key;
+        }
+
+        public V getValue() {
+            return value;
+        }
+
+        public void setValue(V value) {
+            this.value = value;
+        }
+
         @Override
         public String toString() {
             return value.toString(); // Phục vụ xuất file dữ liệu của Value
         }
     }
-    
+
     private SinglyLinkedList<Entry<K, V>>[] table;
     private int capacity;
     private int size = 0;
     private static final double LOAD_FACTOR = 0.75;
-    
+
     @SuppressWarnings("unchecked")
     public CustomHashMap(int capacity) {
         this.capacity = capacity;
-        table = (SinglyLinkedList<Entry<K,V>>[]) new SinglyLinkedList[capacity];
+        table = (SinglyLinkedList<Entry<K, V>>[]) new SinglyLinkedList[capacity];
     }
-    
-    public CustomHashMap() { this(17); } // Sử dụng số nguyên tố làm kích thước mặc định
-    
+
+    public CustomHashMap() {
+        this(17);
+    } // Sử dụng số nguyên tố làm kích thước mặc định
+
     private int hashSlot(K key) {
         return Math.abs(key.hashCode()) % capacity;
     }
-    
+
     @Override
-    public int size() { return size; }
-    
+    public int size() {
+        return size;
+    }
+
     @Override
-    public boolean isEmpty() { return size == 0; }
-    
+    public boolean isEmpty() {
+        return size == 0;
+    }
+
     @Override
     public V get(K key) {
         int slot = hashSlot(key);
         SinglyLinkedList<Entry<K, V>> bucket = table[slot];
-        if (bucket == null) return null;
-        
+        if (bucket == null) {
+            return null;
+        }
+
         SinglyLinkedList.Node<Entry<K, V>> current = bucket.getHead();
         while (current != null) {
             if (current.getElement().getKey().equals(key)) {
@@ -58,21 +76,21 @@ public class CustomHashMap<K, V> implements Map<K, V> {
         }
         return null;
     }
-    
+
     @Override
     public V put(K key, V value) {
         if ((double) size / capacity >= LOAD_FACTOR) {
             resizeTable();
         }
-        
+
         int slot = hashSlot(key);
         if (table[slot] == null) {
             table[slot] = new SinglyLinkedList<>();
         }
-        
+
         SinglyLinkedList<Entry<K, V>> bucket = table[slot];
         SinglyLinkedList.Node<Entry<K, V>> current = bucket.getHead();
-        
+
         while (current != null) {
             if (current.getElement().getKey().equals(key)) {
                 V oldVal = current.getElement().getValue();
@@ -81,21 +99,23 @@ public class CustomHashMap<K, V> implements Map<K, V> {
             }
             current = current.getNext();
         }
-        
+
         bucket.addLast(new Entry<>(key, value));
         size++;
         return null;
     }
-    
+
     @Override
     public V remove(K key) {
         int slot = hashSlot(key);
         SinglyLinkedList<Entry<K, V>> bucket = table[slot];
-        if (bucket == null) return null;
-        
+        if (bucket == null) {
+            return null;
+        }
+
         SinglyLinkedList.Node<Entry<K, V>> prev = null;
         SinglyLinkedList.Node<Entry<K, V>> current = bucket.getHead();
-        
+
         while (current != null) {
             if (current.getElement().getKey().equals(key)) {
                 V removedValue = current.getElement().getValue();
@@ -122,10 +142,10 @@ public class CustomHashMap<K, V> implements Map<K, V> {
         int oldCapacity = capacity;
         capacity = oldCapacity * 2 + 1; // Giữ kích thước là số lẻ/nguyên tố gần đúng
         SinglyLinkedList<Entry<K, V>>[] oldTable = table;
-        
-        table = (SinglyLinkedList<Entry<K,V>>[]) new SinglyLinkedList[capacity];
+
+        table = (SinglyLinkedList<Entry<K, V>>[]) new SinglyLinkedList[capacity];
         size = 0;
-        
+
         for (int i = 0; i < oldCapacity; i++) {
             if (oldTable[i] != null) {
                 SinglyLinkedList.Node<Entry<K, V>> current = oldTable[i].getHead();
@@ -155,5 +175,20 @@ public class CustomHashMap<K, V> implements Map<K, V> {
             }
         }
         return sb.toString();
+    }
+
+    public structures.List<V> toCustomList() {
+        structures.List<V> list = new structures.ArrayList<>(this.size == 0 ? 16 : this.size);
+
+        for (int i = 0; i < capacity; i++) {
+            if (table[i] != null) {
+                SinglyLinkedList.Node<Entry<K, V>> current = table[i].getHead();
+                while (current != null) {
+                    list.add(list.size(), current.getElement().getValue());
+                    current = current.getNext();
+                }
+            }
+        }
+        return list;
     }
 }
