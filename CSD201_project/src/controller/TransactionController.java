@@ -4,10 +4,27 @@
  */
 package controller;
 
+import fileio.StorageHandler;
+import model.Transaction;
+import structures.SinglyLinkedList;
+
 /**
  *
  * @author LENOVO
  */
 public class TransactionController {
+    private SinglyLinkedList<Transaction> transactionHistory;
+    private StorageHandler<Transaction> storageHandler;
+
+    public TransactionController() {
+    }
     
+    
+    public void runMenu() {
+        
+    }
+    
+    public void viewHistory() {
+        
+    }
 }
