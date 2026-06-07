@@ -4,10 +4,22 @@
  */
 package fileio;
 
+import java.util.List;
+
 /**
  *
  * @author LENOVO
  */
-public class StorageHandler {
+public class StorageHandler<T> implements IFileReadWrite<T>{
+
+    @Override
+    public List<T> read() throws Exception {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
+
+    @Override
+    public boolean write(List<T> list) throws Exception {
+        throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
+    }
     
 }

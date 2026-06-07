@@ -4,10 +4,27 @@
  */
 package controller;
 
+import fileio.StorageHandler;
+import model.Alert;
+import structures.SinglyLinkedList;
+
 /**
  *
  * @author LENOVO
  */
 public class AlertController {
+    private SinglyLinkedList<Alert> alertList;
+    private StorageHandler<Alert> storageHandler;
+
+    public AlertController() {
+    }
     
+    
+    public void runMenu() {
+        
+    }
+    
+    public void viewAlerts() {
+        
+    }
 }
