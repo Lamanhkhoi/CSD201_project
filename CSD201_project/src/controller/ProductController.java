@@ -4,16 +4,14 @@
  */
 package controller;
 
-import fileio.StorageHandler;
+import utilities.StorageHandler;
 import model.Product;
-import structures.CustomHashMap;
 
 /**
  *
  * @author LENOVO
  */
 public class ProductController {
-    private CustomHashMap<String,Product> productList;
     private StorageHandler<Product> storageHandler;
 
     public ProductController() {

@@ -1,7 +1,7 @@
 package utilities;
 
 import fileio.IFileReadWrite;
-import structures.List; 
+import java.util.List;
 import java.util.Scanner;
 
 public class StorageHandler<T> {
@@ -15,25 +15,25 @@ public class StorageHandler<T> {
 
     public boolean askAndSave(List<T> listToSave) {
         while (true) {
-            System.out.print("Do you want to save changes? (Y/N): ");
+            System.out.print("Bạn có muốn lưu các thay đổi xuống tệp tin vật lý không? (Y/N): ");
             String input = sc.nextLine().trim().toUpperCase();
 
             if (input.equals("Y")) {
                 try {
                     boolean result = fileHandler.write(listToSave);
                     if (result) {
-                        System.out.println("Changes saved successfully to file!");
+                        System.out.println("Hệ thống: Dữ liệu đã được ghi nhận và lưu trữ thành công!");
                     }
                     return result;
                 } catch (Exception e) {
-                    System.out.println("Critical Error: Cannot write to file. Reason: " + e.getMessage());
+                    System.out.println("Lỗi nghiêm trọng: Không thể ghi file. Lý do: " + e.getMessage());
                     return false;
                 }
             } else if (input.equals("N")) {
-                System.out.println("Changes discarded.");
-                return true; 
+                System.out.println("Hệ thống: Hủy bỏ thao tác lưu tệp tin vật lý.");
+                return false; 
             } else {
-                System.out.println("Invalid input! Please enter only 'Y' or 'N'.");
+                System.out.println("Lựa chọn không hợp lệ! Vui lòng chỉ nhập 'Y' hoặc 'N'.");
             }
         }
     }
