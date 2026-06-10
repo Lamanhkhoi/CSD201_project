@@ -1,6 +1,6 @@
 package fileio;
 
-import structures.List;
+import java.util.List;
 
 public interface IFileReadWrite<E> {    
     List<E> read() throws Exception;
