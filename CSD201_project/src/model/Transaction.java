@@ -12,21 +12,27 @@ import java.time.LocalDateTime;
  */
 public class Transaction {
     private String transactionId;
+    private String orderId;
     private String type;
     private String sku;
+    private String batchId;
     private int quantity;
     private LocalDateTime timestamp;
 
     public Transaction() {
     }
 
-    public Transaction(String transactionId, String type, String sku, int quantity, LocalDateTime timestamp) {
+    public Transaction(String transactionId, String orderId, String type, String sku, String batchId, int quantity, LocalDateTime timestamp) {
         this.transactionId = transactionId;
+        this.orderId = orderId;
         this.type = type;
         this.sku = sku;
+        this.batchId = batchId;
         this.quantity = quantity;
         this.timestamp = timestamp;
     }
+
+   
 
     public String getTransactionId() {
         return transactionId;
@@ -66,6 +72,28 @@ public class Transaction {
 
     public void setTimestamp(LocalDateTime timestamp) {
         this.timestamp = timestamp;
+    }
+
+    public String getOrderId() {
+        return orderId;
+    }
+
+    public void setOrderId(String orderId) {
+        this.orderId = orderId;
+    }
+
+    public String getBatchId() {
+        return batchId;
+    }
+
+    public void setBatchId(String batchId) {
+        this.batchId = batchId;
+    }
+
+    
+    @Override
+    public String toString() {
+        return String.format("%s;%s;%s;%s;%s;%d;%s", transactionId, orderId, type, sku, batchId, quantity,timestamp);
     }
     
     

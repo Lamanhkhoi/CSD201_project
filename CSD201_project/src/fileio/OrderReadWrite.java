@@ -8,7 +8,7 @@ import java.util.ArrayList;
 import java.util.List;
 import structures.LinkedList;
 
-public class OrderReadWrite implements IFileReadWrite<Order> {
+public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
     private final String filePath = "data/orders.txt";
 
     @Override
@@ -85,4 +85,6 @@ public class OrderReadWrite implements IFileReadWrite<Order> {
             return true;
         }
     }
+    
+    
 }

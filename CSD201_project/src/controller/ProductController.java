@@ -9,9 +9,8 @@ import java.util.List;
 
 public class ProductController {
     // Sử dụng java.util.List đồng bộ theo hướng IFileReadWrite
-    private List<Product> productList;
-    private StorageHandler<Product> storageHandler;
     private ProductReadWrite fileIO;
+    private StorageHandler<Product, LinkedList<Product>> storageHandler;
 
     public ProductController() {
         this.productList = new ArrayList<>();

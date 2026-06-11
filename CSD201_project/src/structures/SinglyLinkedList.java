@@ -57,6 +57,7 @@ public class SinglyLinkedList<E> {
         return answer;
     }
 
+    
     // Hàm xuất toàn bộ phần tử của danh sách liên kết thành chuỗi, cách nhau bằng dấu ";"
     public String toFileString() {
         StringBuilder sb = new StringBuilder();

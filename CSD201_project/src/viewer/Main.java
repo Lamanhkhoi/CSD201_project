@@ -15,6 +15,7 @@ public class Main {
             "Quản lý Sản phẩm (Product Management)",
             "Quản lý Kho hàng (Inventory Batch Management)",
             "Quản lý Đơn hàng (Order Management)",
+            "Quản lý giao dịch (Transaction Management)",
             "Thoát chương trình (Exit)"
         };
 
@@ -36,10 +37,13 @@ public class Main {
                     orderView.displaySubMenu();
                     break;
                 case 4:
+                    TransactionView tranView = new TransactionView(mainController.getTranController());
+                    tranView.displaySubMenu();
+                case 5:
                     System.out.println("Cảm ơn bạn đã sử dụng hệ thống. Tắt nguồn RAM!");
                     System.exit(0);
                 default:
-                    System.out.println("Vui lòng chọn từ 1 đến 4!");
+                    System.out.println("Vui lòng chọn từ 1 đến 5!");
             }
         }
     }
