@@ -1,22 +1,16 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
-/**
- *
- * @author LENOVO
- */
 public class Product {
-    private String  sku;
+    private String sku;
     private String name;
     private String category;
     private String supplier;
 
+    // Constructor không tham số
     public Product() {
     }
 
+    // Constructor đầy đủ tham số
     public Product(String sku, String name, String category, String supplier) {
         this.sku = sku;
         this.name = name;
@@ -24,6 +18,7 @@ public class Product {
         this.supplier = supplier;
     }
 
+    // Các phương thức Getter và Setter bắt buộc theo đặc tả
     public String getSku() {
         return sku;
     }
@@ -55,6 +50,10 @@ public class Product {
     public void setSupplier(String supplier) {
         this.supplier = supplier;
     }
-    
-    
+
+    // Định dạng hiển thị sản phẩm theo hàng trong bảng dữ liệu
+    @Override
+    public String toString() {
+        return String.format("%-15s | %-25s | %-15s | %-20s", sku, name, category, supplier);
+    }
 }
