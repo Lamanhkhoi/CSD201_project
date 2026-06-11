@@ -18,7 +18,7 @@ public class Product {
         this.supplier = supplier;
     }
 
-    // Các phương thức Getter và Setter bắt buộc theo đặc tả
+    // Các phương thức Getter và Setter theo đặc tả
     public String getSku() {
         return sku;
     }
@@ -51,7 +51,6 @@ public class Product {
         this.supplier = supplier;
     }
 
-    // Định dạng hiển thị sản phẩm theo hàng trong bảng dữ liệu
     @Override
     public String toString() {
         return String.format("%-15s | %-25s | %-15s | %-20s", sku, name, category, supplier);
