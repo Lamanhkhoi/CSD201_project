@@ -12,23 +12,25 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Comparator;
+import model.Transaction;
 
 public class OrderController {
 
     private final List<Order> allOrdersList;
     private final HashMap<String, Order> orderLookupMap;
     private final PriorityQueue<Order> waitingOrderFEFOQueue;
+    
 
     // Kết nối đến module Kho vật lý của thành viên khác
     private final HashMap<String, InventoryItem> globalInventoryMap;
     private final java.util.PriorityQueue<InventoryItem> globalExpiryHeap;
 
-    private final StorageHandler<Order> storageHandler;
-    private final IFileReadWrite<Order> fileHandler;
-
+    private final StorageHandler<Order, List<Order>> storageHandler;
+    private final IFileReadWrite<Order, List<Order>> fileHandler;
+    private final TransactionController tranController;
     public OrderController(HashMap<String, InventoryItem> globalInventoryMap,
             java.util.PriorityQueue<InventoryItem> globalExpiryHeap,
-            IFileReadWrite<Order> fileHandler) {
+            IFileReadWrite<Order, List<Order>> fileHandler, TransactionController tranController) {
 
         this.globalInventoryMap = globalInventoryMap;
         this.globalExpiryHeap = globalExpiryHeap;
@@ -37,7 +39,7 @@ public class OrderController {
 
         this.allOrdersList = new ArrayList<>();
         this.orderLookupMap = new HashMap<>();
-
+        this.tranController = tranController;
         this.waitingOrderFEFOQueue = new PriorityQueue<>(new Comparator<Order>() {
             @Override
             public int compare(Order o1, Order o2) {
@@ -221,11 +223,21 @@ public class OrderController {
                 }
             }
         }
+//      1. Khai báo thêm TransactionController bên trong OrderController (để gọi sang)
+//       (Bạn có thể truyền txController vào qua Constructor của OrderController nhé)
 
+//      2. Cập nhật đoạn cuối hàm tryAtomicReservation(Order order) như sau:
+//      ... [Đoạn code mô phỏng FEFO phía trên giữ nguyên] ...
         // COMMIT THẬT
         for (ReservationRecord record : tempReservations) {
             InventoryItem realBatch = globalInventoryMap.get(record.batchId);
             realBatch.setQuantity(realBatch.getQuantity() - record.pickedQty);
+            // === ĐOẠN THÊM MỚI: TỰ ĐỘNG GHI NHẬT KÝ KHI XUẤT KHO THÀNH CÔNG ===
+            String txId = "TX-" + System.currentTimeMillis() + "-" + record.batchId; // Tạo mã TX duy nhất
+            Transaction newTx = new Transaction(txId, order.getOrderId(), "EXPORT", realBatch.getSku(), record.batchId, record.pickedQty, LocalDateTime.now());
+            // Gọi sang controller của bạn để nạp vào SinglyLinkedList trên RAM
+            this.tranController.addTransaction(newTx);
+            // =====================================================================
             if (realBatch.getQuantity() == 0) {
                 globalInventoryMap.remove(record.batchId);
             }

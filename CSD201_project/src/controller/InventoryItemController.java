@@ -2,6 +2,7 @@ package controller;
 
 import utilities.StorageHandler;
 import model.InventoryItem;
+import structures.LinkedList;
 
 
 /**
@@ -9,7 +10,7 @@ import model.InventoryItem;
  * @author LENOVO
  */
 public class InventoryItemController {
-    private StorageHandler<InventoryItem> storageHandler;
+    private StorageHandler<InventoryItem, LinkedList<InventoryItem>> storageHandler;
 
     public InventoryItemController() {
     }

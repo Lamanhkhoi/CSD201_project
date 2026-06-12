@@ -3,17 +3,18 @@ package utilities;
 import fileio.IFileReadWrite;
 import java.util.List;
 import java.util.Scanner;
+import structures.SinglyLinkedList;
 
-public class StorageHandler<T> {
-    private final IFileReadWrite<T> fileHandler;
+public class StorageHandler<T, C> {
+    private final IFileReadWrite<T, C> fileHandler;
     private final Scanner sc;
 
-    public StorageHandler(IFileReadWrite<T> fileHandler) {
+    public StorageHandler(IFileReadWrite<T, C> fileHandler) {
         this.fileHandler = fileHandler;
         this.sc = new Scanner(System.in);
     }
 
-    public boolean askAndSave(List<T> listToSave) {
+    public boolean askAndSave(C listToSave) {
         while (true) {
             System.out.print("Bạn có muốn lưu các thay đổi xuống tệp tin vật lý không? (Y/N): ");
             String input = sc.nextLine().trim().toUpperCase();
@@ -37,4 +38,6 @@ public class StorageHandler<T> {
             }
         }
     }
+    
+    
 }

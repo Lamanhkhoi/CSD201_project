@@ -14,7 +14,7 @@ import structures.SinglyLinkedList;
  */
 public class AlertController {
     private SinglyLinkedList<Alert> alertList;
-    private StorageHandler<Alert> storageHandler;
+    private StorageHandler<Alert, SinglyLinkedList<Alert>> storageHandler;
 
     public AlertController() {
     }
