@@ -1,6 +1,7 @@
 package viewer;
 
 import controller.MainController;
+import controller.ProductController;
 
 public class Main {
 
@@ -23,6 +24,8 @@ public class Main {
 
             switch (choice) {
                 case 1:
+                    ProductController productController = new ProductController();
+                    productController.runMenu();
                     System.out.println("Mở Phân hệ Sản phẩm (Chưa cài đặt)...");
                     break;
                 case 2:
