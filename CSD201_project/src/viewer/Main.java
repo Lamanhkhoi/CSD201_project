@@ -10,7 +10,10 @@ public class Main {
 
         // Khởi tạo lõi hệ thống trung tâm (RAM và nạp File được tự động gọi ở đây)
         MainController mainController = new MainController();
-
+        // 1. Khởi tạo controller sản phẩm
+        ProductController productController = new ProductController();
+// 2. Khởi tạo view sản phẩm và tiêm controller vào giống các phân hệ khác
+        ProductView productView = new ProductView(productController);
         Object[] mainOptions = {
             "Quản lý Sản phẩm (Product Management)",
             "Quản lý Kho hàng (Inventory Batch Management)",
@@ -25,8 +28,7 @@ public class Main {
 
             switch (choice) {
                 case 1:
-                    ProductController productController = new ProductController();
-                    productController.runMenu();
+                    productView.displaySubMenu(); // Gọi giao diện phụ của phân hệ Product
                     System.out.println("Mở Phân hệ Sản phẩm (Chưa cài đặt)...");
                     break;
                 case 2:

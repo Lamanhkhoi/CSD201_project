@@ -1,25 +1,20 @@
 package fileio;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 import model.Product;
+import structures.SinglyLinkedList; // Sử dụng cấu trúc dữ liệu của nhóm
 
-public class ProductReadWrite implements IFileReadWrite<Product> {
+public class ProductReadWrite implements IFileReadWrite<Product, SinglyLinkedList<Product>> {
     
-    // Đường dẫn lưu file tương tự như các phân hệ khác của nhóm bạn
     private final String filePath = "data/products.txt";
 
     @Override
-    public List<Product> read() throws Exception {
-        List<Product> list = new ArrayList<>();
+    public SinglyLinkedList<Product> read() throws Exception {
+        SinglyLinkedList<Product> list = new SinglyLinkedList<>();
         File file = new File(filePath);
         
-        // Nếu file chưa tồn tại thì tự động tạo thư mục và file mới
         if (!file.exists()) {
-            if (file.getParentFile() != null) {
-                file.getParentFile().mkdirs();
-            }
+            if (file.getParentFile() != null) file.getParentFile().mkdirs();
             file.createNewFile();
             return list;
         }
@@ -30,11 +25,10 @@ public class ProductReadWrite implements IFileReadWrite<Product> {
                 line = line.trim();
                 if (line.isEmpty()) continue;
 
-                // Tách các trường bằng dấu chấm phẩy (;) cho đồng bộ với cấu trúc chung
                 String[] parts = line.split(";");
                 if (parts.length == 4) {
                     Product p = new Product(parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim());
-                    list.add(p);
+                    list.addLast(p); // Dùng addLast của SinglyLinkedList nhóm viết
                 }
             }
         }
@@ -42,11 +36,14 @@ public class ProductReadWrite implements IFileReadWrite<Product> {
     }
 
     @Override
-    public boolean write(List<Product> list) throws Exception {
+    public boolean write(SinglyLinkedList<Product> list) throws Exception {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePath))) {
-            for (Product p : list) {
+            SinglyLinkedList.Node<Product> current = list.getHead();
+            while (current != null) {
+                Product p = current.getElement();
                 bw.write(p.getSku() + ";" + p.getName() + ";" + p.getCategory() + ";" + p.getSupplier());
                 bw.newLine();
+                current = current.getNext(); // Duyệt qua từng Node kế tiếp
             }
             return true;
         }

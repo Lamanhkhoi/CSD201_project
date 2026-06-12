@@ -1,16 +1,15 @@
 package model;
 
 public class Product {
+
     private String sku;
     private String name;
     private String category;
     private String supplier;
 
-    // Constructor không tham số
     public Product() {
     }
 
-    // Constructor đầy đủ tham số
     public Product(String sku, String name, String category, String supplier) {
         this.sku = sku;
         this.name = name;
@@ -18,7 +17,6 @@ public class Product {
         this.supplier = supplier;
     }
 
-    // Các phương thức Getter và Setter theo đặc tả
     public String getSku() {
         return sku;
     }
