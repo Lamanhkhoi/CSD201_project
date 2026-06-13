@@ -2,7 +2,7 @@ package fileio;
 
 import java.io.*;
 import model.Product;
-import structures.SinglyLinkedList; // Sử dụng cấu trúc dữ liệu của nhóm
+import structures.SinglyLinkedList;
 
 public class ProductReadWrite implements IFileReadWrite<Product, SinglyLinkedList<Product>> {
     
@@ -26,9 +26,15 @@ public class ProductReadWrite implements IFileReadWrite<Product, SinglyLinkedLis
                 if (line.isEmpty()) continue;
 
                 String[] parts = line.split(";");
-                if (parts.length == 4) {
-                    Product p = new Product(parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim());
-                    list.addLast(p); // Dùng addLast của SinglyLinkedList nhóm viết
+                // Cập nhật: Phải đủ 5 phần tử (thêm cột giá) mới tiến hành ép kiểu
+                if (parts.length == 5) {
+                    try {
+                        double price = Double.parseDouble(parts[4].trim());
+                        Product p = new Product(parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim(), price);
+                        list.addLast(p);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Cảnh báo: Lỗi ép kiểu giá tiền ở dòng: " + line);
+                    }
                 }
             }
         }
@@ -41,9 +47,10 @@ public class ProductReadWrite implements IFileReadWrite<Product, SinglyLinkedLis
             SinglyLinkedList.Node<Product> current = list.getHead();
             while (current != null) {
                 Product p = current.getElement();
-                bw.write(p.getSku() + ";" + p.getName() + ";" + p.getCategory() + ";" + p.getSupplier());
+                // Nối thêm giá tiền vào cuối chuỗi
+                bw.write(p.getSku() + ";" + p.getName() + ";" + p.getCategory() + ";" + p.getSupplier() + ";" + p.getPrice());
                 bw.newLine();
-                current = current.getNext(); // Duyệt qua từng Node kế tiếp
+                current = current.getNext();
             }
             return true;
         }

@@ -6,6 +6,7 @@ import structures.SinglyLinkedList;
 import utilities.Inputter;
 
 public class ProductView {
+
     private final ProductController productController;
 
     public ProductView(ProductController productController) {
@@ -47,26 +48,19 @@ public class ProductView {
         }
     }
 
-    // 1. NHIỆM VỤ: THÊM SẢN PHẨM MỚI (CÓ VALIDATE FORMAT)
     private void uiAddProduct() {
         System.out.println("\n--- TIẾN HÀNH THÊM SẢN PHẨM MỚI ---");
         String sku;
         while (true) {
             sku = Inputter.inputStr("Nhập mã SKU sản phẩm: ").trim();
-            
-            // Kiểm tra rỗng
             if (sku.isEmpty()) {
                 System.out.println("Thông báo: Mã SKU không được để trống.");
                 continue;
             }
-            
-            // Kiểm tra định dạng Pxxx bằng mẫu chuẩn của nhóm
             if (!sku.matches(utilities.Pattern.PRODUCT_SKU_PATTERN)) {
-                System.out.println("Thông báo: Mã SKU sai định dạng! Định dạng chuẩn phải là Pxxx (với xxx là 3 chữ số. Ví dụ mẫu: P001, P123, P999).");
+                System.out.println("Thông báo: Mã SKU sai định dạng! Định dạng chuẩn phải là Pxxx (VD: P001, P123).");
                 continue;
             }
-            
-            // Kiểm tra trùng mã
             if (productController.findProductBySku(sku) != null) {
                 System.out.println("Thông báo: SKU này đã tồn tại trên hệ thống! Vui lòng nhập mã khác.");
                 continue;
@@ -74,33 +68,93 @@ public class ProductView {
             break;
         }
 
-        String name = Inputter.inputStr("Nhập tên sản phẩm: ");
-        String category = Inputter.inputStr("Nhập danh mục/phân loại: ");
-        String supplier = Inputter.inputStr("Nhập nhà cung cấp: ");
+        // Bắt buộc nhập Tên sản phẩm
+        String name;
+        while (true) {
+            name = Inputter.inputStr("Nhập tên sản phẩm: ").trim();
+            if (name.isEmpty()) {
+                System.out.println("Thông báo: Tên sản phẩm không được để trống!");
+                continue;
+            }
+            break;
+        }
 
-        Product newProduct = new Product(sku, name, category, supplier);
+// Bắt buộc nhập Danh mục
+        String category;
+        while (true) {
+            category = Inputter.inputStr("Nhập danh mục/phân loại: ").trim();
+            if (category.isEmpty()) {
+                System.out.println("Thông báo: Danh mục không được để trống!");
+                continue;
+            }
+            break;
+        }
+
+        String supplier;
+        while (true) {
+            supplier = Inputter.inputStr("Nhập nhà cung cấp: ").trim();
+            if (supplier.isEmpty()) {
+                System.out.println("Thông báo: Nhà cung cấp không được để trống!");
+                continue;
+            }
+            break;
+        }
+        // Vòng lặp yêu cầu nhập giá, chặn số âm
+        double price;
+        while (true) {
+            price = Inputter.inputDouble("Nhập giá sản phẩm (VNĐ): ");
+
+            // Rào chắn 1: Không được âm hoặc bằng 0
+            if (price <= 0) {
+                System.out.println("Thông báo: Giá sản phẩm phải lớn hơn 0 VNĐ.");
+                continue;
+            }
+
+            // Rào chắn 2: Giá trị nhỏ nhất ở VNĐ thường làm tròn hàng nghìn
+            if (price % 1000 != 0) {
+                System.out.println("Thông báo: Số tiền không hợp lý! Vui lòng nhập giá làm tròn đến hàng nghìn (VD: 1000, 150000).");
+                continue;
+            }
+
+            // Rào chắn 3: Cảnh báo mềm nếu giá quá rẻ (dưới 10.000 VNĐ)
+            if (price < 50000) {
+                System.out.printf("Cảnh báo: Mức giá %,.0f VNĐ là một mức giá thấp.\n", price);
+                String confirm = Inputter.inputStr("Bạn có chắc chắn muốn thiết lập mức giá này không? (Y/N): ").trim();
+                if (!confirm.equalsIgnoreCase("Y")) {
+                    System.out.println("Vui lòng nhập lại giá.");
+                    continue; // Bắt nhập lại
+                }
+            } // 4. Xác nhận mềm: Giá quá cao (> 10.000.000 VNĐ)
+            else if (price > 10000000) {
+                System.out.printf("Cảnh báo: Sản phẩm có giá trị rất cao (%,.0f VNĐ).\n", price);
+                String confirm = Inputter.inputStr("Bạn có chắc chắn mình không gõ thừa số 0 chứ? (Y/N): ").trim();
+                if (!confirm.equalsIgnoreCase("Y")) {
+                    System.out.println("Vui lòng nhập lại giá.");
+                    continue;
+                }
+            }
+
+            break; // Vượt qua mọi trạm kiểm soát -> Thoát vòng lặp
+        }
+
+        Product newProduct = new Product(sku, name, category, supplier, price);
         if (productController.addProduct(newProduct)) {
-            System.out.println("Thông báo: Thêm sản phẩm mới vào danh sách tạm thời thành công!");
+            System.out.println("Thông báo: Thêm sản phẩm mới thành công!");
             productController.askToSaveData();
         }
     }
 
-    // 2. NHIỆM VỤ: CẬP NHẬT THÔNG TIN (CÓ VALIDATE FORMAT KHI TRA CỨU)
     private void uiUpdateProduct() {
         System.out.println("\n--- CẬP NHẬT THÔNG TIN SẢN PHẨM ---");
         String sku;
-        
-        // Tiến hành gác cổng format ngay từ bước gõ mã tìm kiếm
         while (true) {
             sku = Inputter.inputStr("Nhập mã SKU sản phẩm cần sửa: ").trim();
-            
             if (sku.isEmpty()) {
                 System.out.println("Thông báo: Mã SKU không được để trống.");
                 continue;
             }
-            
             if (!sku.matches(utilities.Pattern.PRODUCT_SKU_PATTERN)) {
-                System.out.println("Thông báo: Mã SKU sai định dạng! Định dạng chuẩn phải là Pxxx (với xxx là 3 chữ số. Ví dụ mẫu: P001, P123, P999).");
+                System.out.println("Thông báo: Mã SKU sai định dạng! Định dạng chuẩn phải là Pxxx (VD: P001).");
                 continue;
             }
             break;
@@ -116,13 +170,29 @@ public class ProductView {
         System.out.println("(Để trống và nhấn Enter nếu bạn muốn giữ lại thông tin cũ)");
 
         String newName = Inputter.inputStr("Nhập tên mới: ").trim();
-        if (!newName.isEmpty()) p.setName(newName);
+        if (!newName.isEmpty()) {
+            p.setName(newName);
+        }
 
         String newCategory = Inputter.inputStr("Nhập danh mục mới: ").trim();
-        if (!newCategory.isEmpty()) p.setCategory(newCategory);
+        if (!newCategory.isEmpty()) {
+            p.setCategory(newCategory);
+        }
 
         String newSupplier = Inputter.inputStr("Nhập nhà cung cấp mới: ").trim();
-        if (!newSupplier.isEmpty()) p.setSupplier(newSupplier);
+        if (!newSupplier.isEmpty()) {
+            p.setSupplier(newSupplier);
+        }
+
+        // Sử dụng InputDoubleNullable để cho phép người dùng ấn Enter bỏ qua
+        Double newPrice = Inputter.inputDoubleNullable("Nhập giá mới (VNĐ): ");
+        if (newPrice != null) {
+            if (newPrice < 0) {
+                System.out.println("Thông báo: Giá nhập vào là số âm, hệ thống sẽ giữ nguyên giá cũ.");
+            } else {
+                p.setPrice(newPrice);
+            }
+        }
 
         System.out.println("Thông báo: Cập nhật thông tin hoàn tất!");
         productController.askToSaveData();
@@ -141,26 +211,27 @@ public class ProductView {
     }
 
     private void uiDisplayProducts() {
-        System.out.println("\n--------------------------------------------------------------------------------");
-        System.out.println("                           DANH SÁCH SẢN PHẨM TRÊN HỆ THỐNG                     ");
-        System.out.println("--------------------------------------------------------------------------------");
-        
+        System.out.println("\n------------------------------------------------------------------------------------------------------");
+        System.out.println("                                DANH SÁCH SẢN PHẨM TRÊN HỆ THỐNG                                      ");
+        System.out.println("------------------------------------------------------------------------------------------------------");
+
         SinglyLinkedList<Product> list = productController.getProductList();
         SinglyLinkedList.Node<Product> current = list.getHead();
-        
+
         if (current == null) {
             System.out.println("  Danh sách hiện đang trống.");
-            System.out.println("--------------------------------------------------------------------------------");
+            System.out.println("------------------------------------------------------------------------------------------------------");
             return;
         }
-        
-        System.out.printf("%-15s | %-25s | %-15s | %-20s\n", "SKU", "Tên Sản Phẩm", "Danh Mục", "Nhà Cung Cấp");
-        System.out.println("--------------------------------------------------------------------------------");
-        
+
+        // Kéo dài phần tiêu đề để vừa cột giá
+        System.out.printf("%-15s | %-25s | %-15s | %-20s | %-15s\n", "SKU", "Tên Sản Phẩm", "Danh Mục", "Nhà Cung Cấp", "Đơn Giá");
+        System.out.println("------------------------------------------------------------------------------------------------------");
+
         while (current != null) {
             System.out.println(current.getElement());
             current = current.getNext();
         }
-        System.out.println("--------------------------------------------------------------------------------");
+        System.out.println("------------------------------------------------------------------------------------------------------");
     }
 }
