@@ -1,25 +1,20 @@
 package fileio;
 
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
 import model.Product;
+import structures.SinglyLinkedList;
 
-public class ProductReadWrite implements IFileReadWrite<Product> {
+public class ProductReadWrite implements IFileReadWrite<Product, SinglyLinkedList<Product>> {
     
-    // Đường dẫn lưu file tương tự như các phân hệ khác của nhóm bạn
     private final String filePath = "data/products.txt";
 
     @Override
-    public List<Product> read() throws Exception {
-        List<Product> list = new ArrayList<>();
+    public SinglyLinkedList<Product> read() throws Exception {
+        SinglyLinkedList<Product> list = new SinglyLinkedList<>();
         File file = new File(filePath);
         
-        // Nếu file chưa tồn tại thì tự động tạo thư mục và file mới
         if (!file.exists()) {
-            if (file.getParentFile() != null) {
-                file.getParentFile().mkdirs();
-            }
+            if (file.getParentFile() != null) file.getParentFile().mkdirs();
             file.createNewFile();
             return list;
         }
@@ -30,11 +25,16 @@ public class ProductReadWrite implements IFileReadWrite<Product> {
                 line = line.trim();
                 if (line.isEmpty()) continue;
 
-                // Tách các trường bằng dấu chấm phẩy (;) cho đồng bộ với cấu trúc chung
                 String[] parts = line.split(";");
-                if (parts.length == 4) {
-                    Product p = new Product(parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim());
-                    list.add(p);
+                // Cập nhật: Phải đủ 5 phần tử (thêm cột giá) mới tiến hành ép kiểu
+                if (parts.length == 5) {
+                    try {
+                        double price = Double.parseDouble(parts[4].trim());
+                        Product p = new Product(parts[0].trim(), parts[1].trim(), parts[2].trim(), parts[3].trim(), price);
+                        list.addLast(p);
+                    } catch (NumberFormatException e) {
+                        System.out.println("Cảnh báo: Lỗi ép kiểu giá tiền ở dòng: " + line);
+                    }
                 }
             }
         }
@@ -42,11 +42,15 @@ public class ProductReadWrite implements IFileReadWrite<Product> {
     }
 
     @Override
-    public boolean write(List<Product> list) throws Exception {
+    public boolean write(SinglyLinkedList<Product> list) throws Exception {
         try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePath))) {
-            for (Product p : list) {
-                bw.write(p.getSku() + ";" + p.getName() + ";" + p.getCategory() + ";" + p.getSupplier());
+            SinglyLinkedList.Node<Product> current = list.getHead();
+            while (current != null) {
+                Product p = current.getElement();
+                // Nối thêm giá tiền vào cuối chuỗi
+                bw.write(p.getSku() + ";" + p.getName() + ";" + p.getCategory() + ";" + p.getSupplier() + ";" + p.getPrice());
                 bw.newLine();
+                current = current.getNext();
             }
             return true;
         }

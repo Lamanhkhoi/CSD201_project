@@ -1,24 +1,24 @@
 package model;
 
 public class Product {
+
     private String sku;
     private String name;
     private String category;
     private String supplier;
+    private double price; // Biến mới thêm vào
 
-    // Constructor không tham số
     public Product() {
     }
 
-    // Constructor đầy đủ tham số
-    public Product(String sku, String name, String category, String supplier) {
+    public Product(String sku, String name, String category, String supplier, double price) {
         this.sku = sku;
         this.name = name;
         this.category = category;
         this.supplier = supplier;
+        this.price = price;
     }
 
-    // Các phương thức Getter và Setter theo đặc tả
     public String getSku() {
         return sku;
     }
@@ -51,8 +51,17 @@ public class Product {
         this.supplier = supplier;
     }
 
+    public double getPrice() {
+        return price;
+    }
+
+    public void setPrice(double price) {
+        this.price = price;
+    }
+
     @Override
     public String toString() {
-        return String.format("%-15s | %-25s | %-15s | %-20s", sku, name, category, supplier);
+        // Thêm cột giá tiền với format hiển thị dấu phẩy hàng nghìn
+        return String.format("%-15s | %-25s | %-15s | %-20s | %,12.0f VNĐ", sku, name, category, supplier, price);
     }
 }
