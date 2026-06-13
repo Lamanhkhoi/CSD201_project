@@ -2,6 +2,7 @@ package viewer;
 
 import controller.MainController;
 import controller.ProductController;
+import controller.InventoryItemController;
 
 public class Main {
 
@@ -32,6 +33,7 @@ public class Main {
                     System.out.println("Mở Phân hệ Sản phẩm (Chưa cài đặt)...");
                     break;
                 case 2:
+                    InventoryView IC = new InventoryView();
                     System.out.println("Mở Phân hệ Kho hàng (Chưa cài đặt)...");
                     break;
                 case 3:
