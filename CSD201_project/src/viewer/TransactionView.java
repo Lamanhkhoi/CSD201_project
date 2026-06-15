@@ -24,7 +24,7 @@ public class TransactionView {
         Object[] options = {
             "Xem toan bo lich su giao dich kho (View All)",
             "Tra cuu lich su theo Ma don / Ma SKU (Search)",
-            "Luu toan bo du lieu giao dich vao file (Save File)",
+//            "Luu toan bo du lieu giao dich vao file (Save File)",
             "Quay lại Menu chính (Back to Main Menu)"
         };
 
@@ -66,17 +66,17 @@ public class TransactionView {
                         System.out.println("=> Thong bao: Tu khoa tim kiem khong duoc de trong!");
                     }
                     break;
+//                case 3:
+//                    // CHỨC NĂNG: SỬ DỤNG STORAGEHANDLER THEO YÊU CẦU
+//                    System.out.println("\nChuong trinh dang chuan bi ghi file...");
+//                    
+//                    // 1. Lấy danh sách dữ liệu hiện tại trên RAM
+//                    SinglyLinkedList<Transaction> currentHistory = transactionController.getTransactionHistory();
+//                    
+//                    // 2. Ra lệnh cho storageHandler thực hiện quy trình askAndSave tự động
+//                    transactionController.getStorageHandler().askAndSave(currentHistory);
+//                    break;
                 case 3:
-                    // CHỨC NĂNG: SỬ DỤNG STORAGEHANDLER THEO YÊU CẦU
-                    System.out.println("\nChuong trinh dang chuan bi ghi file...");
-                    
-                    // 1. Lấy danh sách dữ liệu hiện tại trên RAM
-                    SinglyLinkedList<Transaction> currentHistory = transactionController.getTransactionHistory();
-                    
-                    // 2. Ra lệnh cho storageHandler thực hiện quy trình askAndSave tự động
-                    transactionController.getStorageHandler().askAndSave(currentHistory);
-                    break;
-                case 4:
                     System.out.println("Dang quay lai Menu chinh...");
                     return;
                 default:

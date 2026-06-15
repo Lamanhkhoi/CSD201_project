@@ -5,6 +5,7 @@
 package controller;
 
 import fileio.IFileReadWrite;
+import fileio.TransactionReadWrite;
 import java.util.Scanner;
 import utilities.StorageHandler;
 import model.Transaction;
@@ -17,13 +18,14 @@ import structures.SinglyLinkedList;
 public class TransactionController {
     private SinglyLinkedList<Transaction> transactionHistory;
     private StorageHandler<Transaction, SinglyLinkedList<Transaction>> storageHandler;
-    private IFileReadWrite<Transaction, SinglyLinkedList<Transaction>> fileHandler;
+    private IFileReadWrite<Transaction, SinglyLinkedList<Transaction>> fileHandler = new TransactionReadWrite();
     private final Scanner scanner;
-    public TransactionController(IFileReadWrite<Transaction, SinglyLinkedList<Transaction>> fileHandler) {
-        this.fileHandler = fileHandler;
+    public TransactionController() { //IFileReadWrite<Transaction, SinglyLinkedList<Transaction>> fileHandler
+//        this.fileHandler = fileHandler;
         this.transactionHistory = new SinglyLinkedList<>(); // Khởi tạo danh sách rỗng ban đầu
         this.scanner = new Scanner(System.in);
-        this.storageHandler = new StorageHandler<>(fileHandler);
+//        this.storageHandler = new StorageHandler<>(fileHandler);
+        loadInitialData();
     }
 
     public StorageHandler<Transaction, SinglyLinkedList<Transaction>> getStorageHandler() {
@@ -38,7 +40,7 @@ public class TransactionController {
     /**
      * CHỨC NĂNG: Đọc file lưu trữ nền tảng và đồng bộ hóa vào RAM của cấu trúc dữ liệu
      */
-    public void loadInitialData() {
+    private void loadInitialData() {
         try {
             System.out.println("System: Loading transaction logs from database file...");
             SinglyLinkedList<Transaction> loadedData = fileHandler.read();
@@ -60,6 +62,7 @@ public class TransactionController {
     
      public void addTransaction(Transaction tx) {
         transactionHistory.addLast(tx);
+        save();
     }
 
     public void viewHistory() {
@@ -89,6 +92,15 @@ public class TransactionController {
         }
         
         return resultList; // Trả về danh sách kết quả (nếu không tìm thấy, danh sách sẽ trống)
+    }
+    
+    public boolean save() {
+        try {
+            fileHandler.write(transactionHistory);
+        } catch (Exception ex) {
+            return false;
+        }
+        return true;
     }
     
 }
