@@ -1,7 +1,12 @@
 package viewer;
 
+import controller.InventoryItemController;
 import controller.MainController;
 import controller.ProductController;
+import fileio.InventoryItemReadWrite;
+import model.InventoryItem;
+import utilities.StorageHandler;
+import viewer.InventoryView;
 
 public class Main {
 
@@ -32,7 +37,19 @@ public class Main {
                     System.out.println("Mở Phân hệ Sản phẩm (Chưa cài đặt)...");
                     break;
                 case 2:
-                    System.out.println("Mở Phân hệ Kho hàng (Chưa cài đặt)...");
+                    System.out.println("Mở Phân hệ Kho hàng...");
+                    // 1. Khởi tạo đối tượng Đọc/Ghi file
+                    InventoryItemReadWrite fileIO = new InventoryItemReadWrite();
+                    // 2. Khởi tạo StorageHandler
+                    StorageHandler<InventoryItem, java.util.List<InventoryItem>> storage = new StorageHandler<>(fileIO);
+                    // 3. Khởi tạo Controller
+                    InventoryItemController invController = new InventoryItemController(storage);
+                    invController.loadData(fileIO.read());
+
+                    // 4. Khởi tạo View truyền Controller vào
+                    InventoryView invView = new InventoryView(invController);
+                    // 5. Mở màn hình SubMenu
+                    invView.displaySubMenu();
                     break;
                 case 3:
                     OrderView orderView = new OrderView(mainController.getOrderController());
