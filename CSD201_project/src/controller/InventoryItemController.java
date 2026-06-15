@@ -9,6 +9,8 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
 import model.Transaction;
+import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
 
 public class InventoryItemController {
 
@@ -151,11 +153,44 @@ public class InventoryItemController {
     }
 
     public List<InventoryItem> getAlertItems(int daysThreshold) {
-        return null;
+        List<InventoryItem> alertList = new ArrayList<>();
+        LocalDate today = LocalDate.now();
+        
+        for (InventoryItem item : inventoryList){
+            long daysUntilExpiry = ChronoUnit.DAYS.between(today, item.getExpiryDate());
+            if ( daysUntilExpiry <= daysThreshold ){
+                alertList.add(item);
+            }
+        }
+        return alertList;
     }
 
     public List<InventoryItem> getAllInventoryList() {
-        return this.inventoryList;
+        return this.inventoryList; 
+    }
+    
+    // Trả về danh sách đã sắp xếp theo Số lượng
+    public List<InventoryItem> getInventorySortedByQuantity() {
+        List<InventoryItem> sortedList = new ArrayList<>(this.inventoryList);
+        sortedList.sort(new Comparator<InventoryItem>() {
+            @Override
+            public int compare(InventoryItem o1, InventoryItem o2) {
+                return Integer.compare(o1.getQuantity(), o2.getQuantity());
+            }
+        });
+        return sortedList;
+    }
+
+    // Trả về danh sách đã sắp xếp theo Ngày hết hạn (FEFO)
+    public List<InventoryItem> getInventorySortedByExpiryDate() {
+        List<InventoryItem> sortedList = new ArrayList<>(this.inventoryList);
+        sortedList.sort(new Comparator<InventoryItem>() {
+            @Override
+            public int compare(InventoryItem o1, InventoryItem o2) {
+                return o1.getExpiryDate().compareTo(o2.getExpiryDate());
+            }
+        });
+        return sortedList;
     }
 
     private void triggerSave() {

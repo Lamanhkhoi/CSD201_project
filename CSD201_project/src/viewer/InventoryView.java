@@ -162,8 +162,65 @@ public class InventoryView {
                         System.out.println("-> [Lỗi] Lựa chọn không hợp lệ!");
                     }
                     break;
-                case 5: break;
-                case 6: break;
+                case 5: {
+                    System.out.println("\n--- CẢNH BÁO HÀNG CẬN DATE / HẾT HẠN ---");
+                    
+                    // 1. Nhập số ngày cảnh báo (Dùng Inputter để đảm bảo người dùng nhập đúng số)
+                    int daysThreshold = Inputter.inputInt("Nhập số ngày ngưỡng để cảnh báo (Ví dụ: 30): ");
+                    
+                    // 2. Gọi hàm từ Controller (Controller đã dùng ChronoUnit để lọc sẵn)
+                    java.util.List<InventoryItem> alertList = inventoryController.getAlertItems(daysThreshold);
+                    
+                    // 3. In kết quả
+                    if (alertList.isEmpty()) {
+                        System.out.println("-> [Thông báo] Tuyệt vời! Kho hàng hiện tại an toàn, không có sản phẩm nào sắp hết hạn trong " + daysThreshold + " ngày tới.");
+                    } else {
+                        System.out.println("\n>>> PHÁT HIỆN " + alertList.size() + " LÔ HÀNG CẦN CHÚ Ý <<<");
+                        System.out.println("-------------------------------------------------------------------------");
+                        for (InventoryItem item : alertList) {
+                            System.out.println(item.toString());
+                        }
+                        System.out.println("-------------------------------------------------------------------------");
+                    }
+                    break;
+                }
+
+                case 6: {
+                    System.out.println("\n--- HIỂN THỊ & SẮP XẾP TỒN KHO ---");
+                    System.out.println("1. Hiển thị mặc định (Theo thứ tự nhập kho)");
+                    System.out.println("2. Sắp xếp theo Số lượng (Ít nhất lên đầu)");
+                    System.out.println("3. Sắp xếp theo Ngày hết hạn (Cận date lên đầu - FEFO)");
+                    
+                    int sortChoice = Inputter.inputInt("Chọn cách hiển thị (1-3): ");
+
+                    // Tạo một cái giỏ để hứng kết quả từ Controller trả về
+                    java.util.List<InventoryItem> displayList;
+
+                    // Chuyển hướng yêu cầu xuống 3 hàm riêng biệt của Controller mà ta vừa làm
+                    if (sortChoice == 2) {
+                        displayList = inventoryController.getInventorySortedByQuantity();
+                    } else if (sortChoice == 3) {
+                        displayList = inventoryController.getInventorySortedByExpiryDate();
+                    } else if (sortChoice == 1) {
+                        displayList = inventoryController.getAllInventoryList();
+                    } else {
+                        System.out.println("-> [Lỗi] Lựa chọn không hợp lệ. Hệ thống sẽ in theo mặc định.");
+                        displayList = inventoryController.getAllInventoryList();
+                    }
+
+                    // View chỉ làm nhiệm vụ duy nhất là in ra màn hình một cách đẹp đẽ
+                    if (displayList.isEmpty()) {
+                        System.out.println("-> [Thông báo] Kho hàng hiện đang hoàn toàn trống!");
+                    } else {
+                        System.out.println("\n>>> DANH SÁCH TỒN KHO (" + displayList.size() + " LÔ HÀNG) <<<");
+                        System.out.println("-------------------------------------------------------------------------");
+                        for (InventoryItem item : displayList) {
+                            System.out.println(item.toString());
+                        }
+                        System.out.println("-------------------------------------------------------------------------");
+                    }
+                    break;
+                }
                 case 7: return;
                 default: System.out.println("Lựa chọn không hợp lệ!");
             }
