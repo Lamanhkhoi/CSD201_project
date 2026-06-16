@@ -31,7 +31,7 @@ public class InventoryItemController {
             }
         });
     }
-    
+
     // ==============================================================
     // HÀM NẠP DỮ LIỆU TỪ FILE VÀO RAM KHI KHỞI ĐỘNG
     // ==============================================================
@@ -42,11 +42,11 @@ public class InventoryItemController {
         }
 
         for (InventoryItem item : loadedItems) {
-            this.inventoryMap.put(item.getBatchId(), item);  
-            this.inventoryList.add(item);                    
-            this.expiryHeap.enqueue(item);                   
+            this.inventoryMap.put(item.getBatchId(), item);
+            this.inventoryList.add(item);
+            this.expiryHeap.enqueue(item);
         }
-        
+
         System.out.println("-> [Hệ thống] Đã nạp thành công " + loadedItems.size() + " lô hàng từ cơ sở dữ liệu lên RAM.");
     }
 
@@ -81,43 +81,41 @@ public class InventoryItemController {
     }
 
     //code thuật toán lấy hàng cận date từ expiryHeap.dequeueMin()
-    public void pickStockAutoFEFO(String sku, int quantityToPick) {
-        List<InventoryItem> tempList = new ArrayList<>();
-
-        while (quantityToPick > 0 && !expiryHeap.isEmpty()) {
-            InventoryItem currentBatch = expiryHeap.dequeueMin();
-            if (!currentBatch.getSku().equalsIgnoreCase(sku)) {
-                tempList.add(currentBatch);
-                continue;
-            }
-            if (currentBatch.getQuantity() <= quantityToPick) {
-                quantityToPick -= currentBatch.getQuantity();
-                currentBatch.setQuantity(0);
-                inventoryMap.remove(currentBatch.getBatchId());
-                inventoryList.remove(currentBatch);
-            } else {
-                currentBatch.setQuantity(currentBatch.getQuantity() - quantityToPick);
-                quantityToPick = 0;
-                tempList.add(currentBatch);
-            }
-        }
-        //Đưa những hàng không dùng đến từ giỏ tạm về lại kho Heap
-        for (InventoryItem item : tempList) {
-            expiryHeap.enqueue(item);
-        }
-
-        //Kiểm tra kết quả và Lưu file
-        if (quantityToPick > 0) {
-            System.out.println("-> [Cảnh báo] Kho không đủ hàng mã " + sku + "! Khách còn thiếu " + quantityToPick + " sản phẩm.");
-        } else {
-            System.out.println("-> [Thành công] Đã xuất kho tự động ưu tiên hàng cận date (FEFO) hoàn tất!");
-        }
-
-        triggerSave();
-
-    }
-
-    // TODO: Sẽ gọi inventoryMap.get() để sửa
+//    public void pickStockAutoFEFO(String sku, int quantityToPick) {
+//        List<InventoryItem> tempList = new ArrayList<>();
+//
+//        while (quantityToPick > 0 && !expiryHeap.isEmpty()) {
+//            InventoryItem currentBatch = expiryHeap.dequeueMin();
+//            if (!currentBatch.getSku().equalsIgnoreCase(sku)) {
+//                tempList.add(currentBatch);
+//                continue;
+//            }
+//            if (currentBatch.getQuantity() <= quantityToPick) {
+//                quantityToPick -= currentBatch.getQuantity();
+//                currentBatch.setQuantity(0);
+//                inventoryMap.remove(currentBatch.getBatchId());
+//                inventoryList.remove(currentBatch);
+//            } else {
+//                currentBatch.setQuantity(currentBatch.getQuantity() - quantityToPick);
+//                quantityToPick = 0;
+//                tempList.add(currentBatch);
+//            }
+//        }
+//        //Đưa những hàng không dùng đến từ giỏ tạm về lại kho Heap
+//        for (InventoryItem item : tempList) {
+//            expiryHeap.enqueue(item);
+//        }
+//
+//        //Kiểm tra kết quả và Lưu file
+//        if (quantityToPick > 0) {
+//            System.out.println("-> [Cảnh báo] Kho không đủ hàng mã " + sku + "! Khách còn thiếu " + quantityToPick + " sản phẩm.");
+//        } else {
+//            System.out.println("-> [Thành công] Đã xuất kho tự động ưu tiên hàng cận date (FEFO) hoàn tất!");
+//        }
+//
+//        triggerSave();
+//
+//    }
     public void updateItemLocation(String batchId, String newLocation) {
         System.out.println("-> [Hệ thống] Đang tìm kiếm lô hàng...");
         InventoryItem targetItem = inventoryMap.get(batchId);
@@ -141,24 +139,24 @@ public class InventoryItemController {
     }
 
     public List<InventoryItem> getBatchesBySku(String sku) {
-        List<InventoryItem> result = new ArrayList<>(); 
+        List<InventoryItem> result = new ArrayList<>();
         // Quét toàn bộ kho hàng
         for (InventoryItem item : inventoryList) {
             if (item.getSku().equalsIgnoreCase(sku)) {
-                result.add(item); 
+                result.add(item);
             }
         }
-        
-        return result; 
+
+        return result;
     }
 
     public List<InventoryItem> getAlertItems(int daysThreshold) {
         List<InventoryItem> alertList = new ArrayList<>();
         LocalDate today = LocalDate.now();
-        
-        for (InventoryItem item : inventoryList){
+
+        for (InventoryItem item : inventoryList) {
             long daysUntilExpiry = ChronoUnit.DAYS.between(today, item.getExpiryDate());
-            if ( daysUntilExpiry <= daysThreshold ){
+            if (daysUntilExpiry <= daysThreshold) {
                 alertList.add(item);
             }
         }
@@ -166,9 +164,9 @@ public class InventoryItemController {
     }
 
     public List<InventoryItem> getAllInventoryList() {
-        return this.inventoryList; 
+        return this.inventoryList;
     }
-    
+
     // Trả về danh sách đã sắp xếp theo Số lượng
     public List<InventoryItem> getInventorySortedByQuantity() {
         List<InventoryItem> sortedList = new ArrayList<>(this.inventoryList);

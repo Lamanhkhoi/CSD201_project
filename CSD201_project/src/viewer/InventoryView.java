@@ -15,7 +15,6 @@ public class InventoryView {
     public void displaySubMenu() {
         Object[] options = {
             "Nhập kho lô hàng mới (Receive Stock)",
-            "Xuất kho tự động FEFO (Pick Stock)",
             "Điều chuyển vị trí kệ (Relocate Stock)",
             "Tìm kiếm lô hàng trong kho (Search)",
             "Cảnh báo hàng cận date/hết hạn (Expiry Alerts)",
@@ -74,15 +73,10 @@ public class InventoryView {
                     inventoryController.receiveNewItem(newItem);
                     break;
 
-                case 2:
-                    System.out.println("\n--- XUẤT KHO TỰ ĐỘNG (FEFO) ---");
-                    String searchSku = Inputter.inputStr("Nhập mã sản phẩm (SKU) cần xuất: ").toUpperCase();
-                    int pickQty = Inputter.inputInt("Nhập số lượng cần xuất: ");
-                    inventoryController.pickStockAutoFEFO(searchSku, pickQty);
-                    break;
+                
                     
                 // Các case khác tạm thời để trống break;
-                case 3:
+                case 2:
                     System.out.println("\n--- ĐIỀU CHUYỂN VỊ TRÍ KỆ HÀNG ---");
                     
                     // 1. Nhập và kiểm tra mã Batch ID bằng vòng lặp
@@ -107,7 +101,7 @@ public class InventoryView {
                     inventoryController.updateItemLocation(relocateBatchId, newLoc);
                     break;
 
-                case 4:
+                case 3:
                     System.out.println("\n--- TÌM KIẾM LÔ HÀNG TRONG KHO ---");
                     System.out.println("1. Tìm chính xác theo Mã Lô Hàng (Batch ID)");
                     System.out.println("2. Tìm tất cả theo Mã Sản Phẩm (SKU)");
@@ -162,7 +156,7 @@ public class InventoryView {
                         System.out.println("-> [Lỗi] Lựa chọn không hợp lệ!");
                     }
                     break;
-                case 5: {
+                case 4: {
                     System.out.println("\n--- CẢNH BÁO HÀNG CẬN DATE / HẾT HẠN ---");
                     
                     // 1. Nhập số ngày cảnh báo (Dùng Inputter để đảm bảo người dùng nhập đúng số)
@@ -185,7 +179,7 @@ public class InventoryView {
                     break;
                 }
 
-                case 6: {
+                case 5: {
                     System.out.println("\n--- HIỂN THỊ & SẮP XẾP TỒN KHO ---");
                     System.out.println("1. Hiển thị mặc định (Theo thứ tự nhập kho)");
                     System.out.println("2. Sắp xếp theo Số lượng (Ít nhất lên đầu)");
@@ -221,7 +215,7 @@ public class InventoryView {
                     }
                     break;
                 }
-                case 7: return;
+                case 6: return;
                 default: System.out.println("Lựa chọn không hợp lệ!");
             }
         }
