@@ -23,14 +23,14 @@ public class OrderController {
 
     // Kết nối đến module Kho vật lý của thành viên khác
     private final HashMap<String, InventoryItem> globalInventoryMap;
-    private final java.util.PriorityQueue<InventoryItem> globalExpiryHeap;
+    private final PriorityQueue<InventoryItem> globalExpiryHeap;
 
     private final StorageHandler<Order, List<Order>> storageHandler;
     private final IFileReadWrite<Order, List<Order>> fileHandler;
     private final TransactionController tranController;
 
     public OrderController(HashMap<String, InventoryItem> globalInventoryMap,
-            java.util.PriorityQueue<InventoryItem> globalExpiryHeap,
+            PriorityQueue<InventoryItem> globalExpiryHeap,
             IFileReadWrite<Order, List<Order>> fileHandler, TransactionController tranController) {
 
         this.globalInventoryMap = globalInventoryMap;
