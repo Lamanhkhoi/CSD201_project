@@ -1,5 +1,6 @@
 package viewer;
 
+import controller.MainController;
 import controller.OrderController;
 import model.Order;
 import model.OrderItem;
@@ -13,9 +14,12 @@ import java.util.Comparator;
 import java.util.List;
 
 public class OrderView {
+
+    private final MainController mainController;
     private final OrderController orderController;
 
-    public OrderView(OrderController orderController) {
+    public OrderView(MainController mainController, OrderController orderController) {
+        this.mainController = mainController;
         this.orderController = orderController;
     }
 
@@ -44,6 +48,8 @@ public class OrderView {
                     break;
                 case 4:
                     orderController.processAllWaitingOrders();
+                    mainController.saveOrders();
+                    mainController.saveInventory();
                     break;
                 case 5:
                     return;
@@ -55,7 +61,7 @@ public class OrderView {
 
     private void uiCreateOrder() {
         System.out.println("\n--- TIẾN HÀNH ĐẶT ĐƠN HÀNG MỚI ---");
-        
+
         String orderId;
         while (true) {
             orderId = Inputter.inputStr("Nhập mã đơn hàng (ORDxxx): ");
@@ -71,16 +77,18 @@ public class OrderView {
         }
 
         String name = Inputter.inputStr("Nhập tên khách hàng: ");
-        
+
         String phone;
         while (true) {
             phone = Inputter.inputStr("Nhập số điện thoại (10 số): ");
-            if (phone.matches(Pattern.PHONE_PATTERN)) break;
+            if (phone.matches(Pattern.PHONE_PATTERN)) {
+                break;
+            }
             System.out.println("Sai định dạng số điện thoại Việt Nam!");
         }
 
         String address = Inputter.inputStr("Nhập địa chỉ giao hàng: ");
-        
+
         LocalDate expected = Inputter.inputDate("Nhập ngày giao hàng dự kiến (dd/MM/yyyy): ");
         LocalDate latest = Inputter.inputDate("Nhập ngày giao hẹn trễ nhất (dd/MM/yyyy): ");
         double amount = Inputter.inputDouble("Nhập tổng giá trị đơn hàng (VNĐ): ");
@@ -93,14 +101,18 @@ public class OrderView {
             itemsList.addLast(new OrderItem(sku, qty));
 
             String confirm = Inputter.inputStr("Bấm 'Y' để hoàn tất đơn, hoặc phím bất kỳ để tiếp tục nhập SKU: ");
-            if (confirm.equalsIgnoreCase("Y")) break;
+            if (confirm.equalsIgnoreCase("Y")) {
+                break;
+            }
         }
 
-        Order newOrder = new Order(orderId, name, phone, address, 
-                LocalDateTime.now(), expected.atStartOfDay(), latest.atStartOfDay(), 
+        Order newOrder = new Order(orderId, name, phone, address,
+                LocalDateTime.now(), expected.atStartOfDay(), latest.atStartOfDay(),
                 "Pending", amount, itemsList);
 
         orderController.registerNewOrder(newOrder);
+        System.out.println("Đăng ký đơn hàng thành công!");
+        mainController.saveOrders();
     }
 
     private void uiDisplayOrdersMenu() {
@@ -146,7 +158,6 @@ public class OrderView {
     }
 
     // Tìm kiếm chính xác và in cấu trúc cây chi tiết của một Đơn hàng
-
     private void displayOrderById() {
         String id = Inputter.inputStr("Nhập mã đơn hàng cần tìm: ").toUpperCase();
         Order o = orderController.getOrderById(id);
@@ -154,7 +165,7 @@ public class OrderView {
             System.out.println("Không tìm thấy đơn hàng.");
             return;
         }
-        
+
         System.out.println("\n=======================================================");
         System.out.println("           CHI TIẾT ĐƠN HÀNG: " + o.getOrderId());
         System.out.println("=======================================================");
@@ -180,10 +191,10 @@ public class OrderView {
     private void displayOrdersByStatus() {
         System.out.println("Các trạng thái mẫu: Pending, Waiting, Ready, Delivery, Cancel, Completed");
         String targetStatus = Inputter.inputStr("Nhập trạng thái bạn muốn lọc: ").trim();
-        
+
         List<Order> allOrders = orderController.getAllOrdersList();
         List<Order> filteredList = new ArrayList<>();
-        
+
         for (Order o : allOrders) {
             if (o.getStatus().equalsIgnoreCase(targetStatus)) {
                 filteredList.add(o);
@@ -208,12 +219,12 @@ public class OrderView {
 
         System.out.println("1. Xếp theo Ngày Tạo tăng dần (Cũ nhất trước)\n2. Xếp theo Ngày Tạo giảm dần (Mới nhất trước)");
         int orderChoice = Inputter.inputInt("Lựa chọn kiểu sắp xếp (1-2): ");
-        
+
         sortedList.sort(new Comparator<Order>() {
             @Override
             public int compare(Order o1, Order o2) {
-                return orderChoice == 2 ? o2.getCreatedDate().compareTo(o1.getCreatedDate()) 
-                                        : o1.getCreatedDate().compareTo(o2.getCreatedDate());
+                return orderChoice == 2 ? o2.getCreatedDate().compareTo(o1.getCreatedDate())
+                        : o1.getCreatedDate().compareTo(o2.getCreatedDate());
             }
         });
 
@@ -235,8 +246,8 @@ public class OrderView {
         sortedList.sort(new Comparator<Order>() {
             @Override
             public int compare(Order o1, Order o2) {
-                return orderChoice == 2 ? o2.getExpectedDate().compareTo(o1.getExpectedDate()) 
-                                        : o1.getExpectedDate().compareTo(o2.getExpectedDate());
+                return orderChoice == 2 ? o2.getExpectedDate().compareTo(o1.getExpectedDate())
+                        : o1.getExpectedDate().compareTo(o2.getExpectedDate());
             }
         });
 
@@ -258,8 +269,8 @@ public class OrderView {
         sortedList.sort(new Comparator<Order>() {
             @Override
             public int compare(Order o1, Order o2) {
-                return orderChoice == 2 ? o2.getLatestDate().compareTo(o1.getLatestDate()) 
-                                        : o1.getLatestDate().compareTo(o2.getLatestDate());
+                return orderChoice == 2 ? o2.getLatestDate().compareTo(o1.getLatestDate())
+                        : o1.getLatestDate().compareTo(o2.getLatestDate());
             }
         });
 
@@ -273,17 +284,17 @@ public class OrderView {
             return;
         }
         System.out.println("---------------------------------------------------------------------------------------------");
-        System.out.printf("%-8s | %-16s | %-10s | %-10s | %-10s | %-10s | %-12s\n", 
+        System.out.printf("%-8s | %-16s | %-10s | %-10s | %-10s | %-10s | %-12s\n",
                 "Mã Đơn", "Khách Hàng", "Ngày Tạo", "Dự Kiến", "Hạn Trễ", "Trạng Thái", "Tổng Tiền");
         System.out.println("---------------------------------------------------------------------------------------------");
         for (Order o : list) {
-            System.out.printf("%-8s | %-16s | %-10s | %-10s | %-10s | %-10s | %,12.0f\n", 
-                    o.getOrderId(), 
-                    o.getCustomerName().length() > 16 ? o.getCustomerName().substring(0, 13) + "..." : o.getCustomerName(), 
-                    o.getCreatedDate().toLocalDate().toString(), 
-                    o.getExpectedDate().toLocalDate().toString(), 
-                    o.getLatestDate().toLocalDate().toString(), 
-                    o.getStatus(), 
+            System.out.printf("%-8s | %-16s | %-10s | %-10s | %-10s | %-10s | %,12.0f\n",
+                    o.getOrderId(),
+                    o.getCustomerName().length() > 16 ? o.getCustomerName().substring(0, 13) + "..." : o.getCustomerName(),
+                    o.getCreatedDate().toLocalDate().toString(),
+                    o.getExpectedDate().toLocalDate().toString(),
+                    o.getLatestDate().toLocalDate().toString(),
+                    o.getStatus(),
                     o.getTotalAmount());
         }
         System.out.println("---------------------------------------------------------------------------------------------");
@@ -292,6 +303,10 @@ public class OrderView {
 
     private void uiUpdateStatus() {
         String id = Inputter.inputStr("Nhập mã đơn hàng cần sửa trạng thái: ");
+        if (orderController.getOrderById(id) == null) {
+            System.out.println("Thất bại: Mã đơn hàng không tồn tại!");
+            return;
+        }
         System.out.println("Các trạng thái hợp lệ: Pending, Waiting, Ready, Delivery, Cancel, Completed");
         String status = Inputter.inputStr("Nhập trạng thái mới muốn chuyển đổi: ");
         orderController.updateOrderStatusManual(id, status);

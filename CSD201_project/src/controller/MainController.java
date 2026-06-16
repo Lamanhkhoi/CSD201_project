@@ -1,65 +1,168 @@
-//package controller;
-//
-//import model.Order;
-//import model.InventoryItem;
-//import fileio.IFileReadWrite;
-//import fileio.OrderReadWrite;
-//import fileio.TransactionReadWrite;
-//import java.util.HashMap;
-//import java.util.List;
-//import model.Transaction;
-//import structures.SinglyLinkedList;
-//
-//public class MainController {
-//
-//    private final OrderController orderController;
-//    private final IFileReadWrite<Order, List<Order>> orderFileHandler;
-//    private final TransactionController tranController;
-//    private final IFileReadWrite<Transaction, SinglyLinkedList<Transaction>> tranFileHandler;
-//    public MainController() {
-//        // Giả lập cấu trúc kho vật lý trống từ thành viên khác
-//        // 1. Khởi tạo cấu trúc kho vật lý giả lập từ thành viên khác
-//        HashMap<String, InventoryItem> globalInventoryMap = new HashMap<>();
-//        java.util.PriorityQueue<InventoryItem> globalExpiryHeap = new java.util.PriorityQueue<>();
-//        
-//        // 2. Khởi tạo phân hệ Quản lý file và Bộ điều khiển Nhật ký giao dịch (Transaction) trước
-//        this.tranFileHandler = new TransactionReadWrite();
-//        // SỬA TẠI ĐÂY: Chỉ truyền duy nhất tranFileHandler, bỏ biến transactionHistory thừa
-//        this.tranController = new TransactionController();
-//
-//        // 3. Khởi tạo phân hệ Quản lý file và Bộ điều khiển Đơn hàng (Order)
-//        this.orderFileHandler = new OrderReadWrite();
-//        // SỬA TẠI ĐÂY: Tiêm (Inject) thêm 'tranController' vào trong OrderController 
-//        // để khi bốc kho FEFO thành công, OrderController có thể tự gọi sang Transaction để ghi nhật ký.
-//        this.orderController = new OrderController(globalInventoryMap, globalExpiryHeap, orderFileHandler, tranController);
-//        
-//        // 4. Chịu trách nhiệm Load file dữ liệu toàn bộ hệ thống lúc khởi động
-//        loadSystemData();
-//    }
-//
-//    private void loadSystemData() {
-//        try {
-//            List<Order> loadedOrders = orderFileHandler.read();
-//            orderController.initializeData(loadedOrders);
-//            System.out.println("System Core: Order entries successfully initialized.");
-//        } catch (Exception e) {
-//            System.out.println("System Core Warning: Failed to boot file database. " + e.getMessage());
-//        }
-//        // SỬA TẠI ĐÂY: Kích hoạt nạp dữ liệu Lịch sử giao dịch cũ từ file lên RAM
-////        try {
-////            tranController.loadInitialData(); 
-////            System.out.println("System Core: Transaction logs successfully initialized.");
-////        } catch (Exception e) {
-////            System.out.println("System Core Warning: Failed to boot Transaction file database. " + e.getMessage());
-////        }
-//    }
-//
-//    public OrderController getOrderController() {
-//        return orderController;
-//    }
-//    
-//    public TransactionController getTranController() {
-//        return tranController;
-//    }
-//    
-//}
+package controller;
+
+import model.*;
+import fileio.*;
+import structures.SinglyLinkedList;
+import structures.PriorityQueue;
+import utilities.StorageHandler;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Comparator;
+
+public class MainController {
+
+    // 1. Vùng lưu trữ dữ liệu tập trung toàn hệ thống trên RAM
+    private SinglyLinkedList<Product> productList;
+    private HashMap<String, InventoryItem> inventoryMap;
+    private PriorityQueue<InventoryItem> expiryHeap;
+    private List<InventoryItem> inventoryList;
+    private List<Order> allOrdersList;
+    private HashMap<String, Order> orderLookupMap;
+    private PriorityQueue<Order> waitingOrderFEFOQueue;
+    private SinglyLinkedList<Transaction> transactionHistory;
+
+    // 2. Các File IO Handlers độc lập
+    private final ProductReadWrite productFileIO;
+    private final InventoryItemReadWrite inventoryFileIO;
+    private final OrderReadWrite orderFileHandler;
+    private final TransactionReadWrite tranFileHandler;
+
+    // 3. Các StorageHandlers hỗ trợ Phương án B (Hỏi và Lưu)
+    private final StorageHandler<Product, SinglyLinkedList<Product>> productStorage;
+    private final StorageHandler<InventoryItem, List<InventoryItem>> inventoryStorage;
+    private final StorageHandler<Order, List<Order>> orderStorage;
+    private final StorageHandler<Transaction, SinglyLinkedList<Transaction>> tranStorage;
+
+    // 4. Hệ thống các SubController lõi
+    private final ProductController productController;
+    private final InventoryItemController inventoryController;
+    private final OrderController orderController;
+    private final TransactionController transactionController;
+
+    public MainController() {
+        // Khởi tạo các cấu trúc dữ liệu trống
+        this.productList = new SinglyLinkedList<>();
+        this.inventoryMap = new HashMap<>();
+        this.inventoryList = new ArrayList<>();
+        this.allOrdersList = new ArrayList<>();
+        this.orderLookupMap = new HashMap<>();
+        this.transactionHistory = new SinglyLinkedList<>();
+
+        this.expiryHeap = new PriorityQueue<>(new Comparator<InventoryItem>() {
+            @Override
+            public int compare(InventoryItem o1, InventoryItem o2) {
+                return o1.compareTo(o2);
+            }
+        });
+
+        this.waitingOrderFEFOQueue = new PriorityQueue<>(new Comparator<Order>() {
+            @Override
+            public int compare(Order o1, Order o2) {
+                return o1.getExpectedDate().compareTo(o2.getExpectedDate());
+            }
+        });
+
+        // Khởi tạo tầng Đọc/Ghi file vật lý
+        this.productFileIO = new ProductReadWrite();
+        this.inventoryFileIO = new InventoryItemReadWrite();
+        this.orderFileHandler = new OrderReadWrite();
+        this.tranFileHandler = new TransactionReadWrite();
+
+        // Khởi tạo các StorageHandler tương ứng
+        this.productStorage = new StorageHandler<>(productFileIO);
+        this.inventoryStorage = new StorageHandler<>(inventoryFileIO);
+        this.orderStorage = new StorageHandler<>(orderFileHandler);
+        this.tranStorage = new StorageHandler<>(tranFileHandler);
+
+        // Đọc toàn bộ dữ liệu từ các file văn bản lên RAM trước khi chạy SubController
+        loadAllSystemData();
+
+        // Khởi tạo các SubController bằng cách TRUYỀN THAM CHIẾU DATA VÀO CONSTRUCTOR
+        this.productController = new ProductController(this.productList);
+        this.transactionController = new TransactionController(this.transactionHistory);
+        this.inventoryController = new InventoryItemController(this.inventoryMap, this.expiryHeap, this.inventoryList, this.transactionController);
+        this.orderController = new OrderController(this.allOrdersList, this.inventoryMap, this.expiryHeap, this.transactionController);
+    }
+
+    private void loadAllSystemData() {
+        try {
+            this.productList = productFileIO.read();
+            System.out.println("System Core: Tải dữ liệu sản phẩm thành công.");
+        } catch (Exception e) {
+            System.out.println("System Core Warning: Lỗi tải file sản phẩm: " + e.getMessage());
+        }
+
+        try {
+            this.inventoryList = inventoryFileIO.read();
+            for (InventoryItem item : this.inventoryList) {
+                this.inventoryMap.put(item.getBatchId(), item);
+                if (item.getStatus().equalsIgnoreCase("AVAILABLE")) {
+                    this.expiryHeap.enqueue(item);
+                }
+            }
+            System.out.println("System Core: Tải dữ liệu tồn kho thành công.");
+        } catch (Exception e) {
+            System.out.println("System Core Warning: Lỗi tải file tồn kho: " + e.getMessage());
+        }
+
+        try {
+            this.allOrdersList = orderFileHandler.read();
+            for (Order o : this.allOrdersList) {
+                this.orderLookupMap.put(o.getOrderId(), o);
+                if (o.getStatus().equalsIgnoreCase("Waiting") || o.getStatus().equalsIgnoreCase("Pending")) {
+                    this.waitingOrderFEFOQueue.enqueue(o);
+                }
+            }
+            System.out.println("System Core: Tải dữ liệu đơn hàng thành công.");
+        } catch (Exception e) {
+            System.out.println("System Core Warning: Lỗi tải file đơn hàng: " + e.getMessage());
+        }
+
+        try {
+            this.transactionHistory = tranFileHandler.read();
+            System.out.println("System Core: Tải dữ liệu nhật ký giao dịch thành công.");
+        } catch (Exception e) {
+            System.out.println("System Core Warning: Lỗi tải file giao dịch: " + e.getMessage());
+        }
+    }
+
+    // --- CÁC HÀM GETTER ĐỂ SUBVIEW GỌI CHUYỂN TIẾP XUỐNG SUBCONTROLLER ---
+    public ProductController getProductController() {
+        return productController;
+    }
+
+    public InventoryItemController getInventoryController() {
+        return inventoryController;
+    }
+
+    public OrderController getOrderController() {
+        return orderController;
+    }
+
+    public TransactionController getTransactionController() {
+        return transactionController;
+    }
+
+    // --- CÁC HÀM SAVE FILE THEO PHƯƠNG ÁN B (GỌI STORAGEHANDLER ĐỂ HỎI NGƯỜI DÙNG) ---
+    public boolean saveProducts() {
+        return productStorage.askAndSave(this.productList);
+    }
+
+    public boolean saveInventory() {
+        return inventoryStorage.askAndSave(this.inventoryList);
+    }
+
+    public boolean saveOrders() {
+        return orderStorage.askAndSave(this.allOrdersList);
+    }
+
+    public boolean saveTransactions() {
+        try {
+            return tranFileHandler.write(this.transactionHistory);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+}

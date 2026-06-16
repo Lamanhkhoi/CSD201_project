@@ -4,27 +4,27 @@
  */
 package viewer;
 
+import controller.MainController;
 import controller.TransactionController;
 import model.Transaction;
 import structures.SinglyLinkedList;
 import utilities.Inputter;
 
-/**
- *
- * @author LENOVO
- */
 public class TransactionView {
+
+    private final MainController mainController;
     private final TransactionController transactionController;
 
-    public TransactionView(TransactionController transactionController) {
+    public TransactionView(MainController mainController, TransactionController transactionController) {
+        this.mainController = mainController;
         this.transactionController = transactionController;
     }
-    
+
     public void displaySubMenu() {
         Object[] options = {
             "Xem toan bo lich su giao dich kho (View All)",
             "Tra cuu lich su theo Ma don / Ma SKU (Search)",
-//            "Luu toan bo du lieu giao dich vao file (Save File)",
+            //            "Luu toan bo du lieu giao dich vao file (Save File)",
             "Quay lại Menu chính (Back to Main Menu)"
         };
 
@@ -38,18 +38,18 @@ public class TransactionView {
                     transactionController.viewHistory();
                     break;
                 case 2:
-                   // Chức năng: Tra cứu lịch sử theo Mã đơn / Mã SKU
+                    // Chức năng: Tra cứu lịch sử theo Mã đơn / Mã SKU
                     String keyword = Inputter.inputStr("Nhap Ma don hang (Order ID) hoac Ma san pham (SKU) can tim: ");
-                    
+
                     if (!keyword.isEmpty()) {
                         System.out.println("\n--- KET QUA TRA CUU CHO TU KHOA: [" + keyword + "] ---");
-                        
+
                         // Gọi hàm controller mới để nhận về 1 LIST danh sách kết quả
                         SinglyLinkedList<Transaction> results = transactionController.searchTransactions(keyword);
-                        
+
                         // Duyệt danh sách kết quả để hiển thị ra màn hình
                         SinglyLinkedList.Node<Transaction> current = results.getHead();
-                        
+
                         if (current == null) {
                             System.out.println("Khong tim thay bat ky lich su giao dich nao trung khop.");
                         } else {
