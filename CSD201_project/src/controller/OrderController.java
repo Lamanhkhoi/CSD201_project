@@ -12,6 +12,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Comparator;
+import java.util.Collections;
 import model.Transaction;
 
 public class OrderController {
@@ -19,17 +20,17 @@ public class OrderController {
     private final List<Order> allOrdersList;
     private final HashMap<String, Order> orderLookupMap;
     private final PriorityQueue<Order> waitingOrderFEFOQueue;
-    
 
     // Kết nối đến module Kho vật lý của thành viên khác
     private final HashMap<String, InventoryItem> globalInventoryMap;
-    private final java.util.PriorityQueue<InventoryItem> globalExpiryHeap;
+    private final PriorityQueue<InventoryItem> globalExpiryHeap;
 
     private final StorageHandler<Order, List<Order>> storageHandler;
     private final IFileReadWrite<Order, List<Order>> fileHandler;
     private final TransactionController tranController;
+
     public OrderController(HashMap<String, InventoryItem> globalInventoryMap,
-            java.util.PriorityQueue<InventoryItem> globalExpiryHeap,
+            PriorityQueue<InventoryItem> globalExpiryHeap,
             IFileReadWrite<Order, List<Order>> fileHandler, TransactionController tranController) {
 
         this.globalInventoryMap = globalInventoryMap;
@@ -54,19 +55,25 @@ public class OrderController {
                 return o1.getOrderId().compareTo(o2.getOrderId());
             }
         });
+        loadSystemData();
     }
 
-    /**
-     * Nhận danh sách đơn hàng được nạp lên từ MainController và phân tách cấu
-     * trúc chỉ mục RAM
-     */
+    private void loadSystemData() {
+        try {
+            List<Order> loadedOrders = fileHandler.read();
+            initializeData(loadedOrders);
+            System.out.println("System Core: Order entries successfully initialized.");
+        } catch (Exception e) {
+            System.out.println("System Core Warning: Failed to boot file database. " + e.getMessage());
+        }
+    }
+
     public void initializeData(List<Order> loadedOrders) {
         this.allOrdersList.clear();
         this.orderLookupMap.clear();
         LocalDateTime now = LocalDateTime.now();
 
         for (Order order : loadedOrders) {
-            // RÀNG BUỘC: Tự động Cancel đơn hàng quá hạn trễ nhất (Trừ Delivery/Completed)
             if (!order.getStatus().equals("Completed") && !order.getStatus().equals("Delivery")
                     && order.getLatestDate().isBefore(now)) {
 
@@ -85,18 +92,13 @@ public class OrderController {
             }
         }
 
-        // Kích hoạt đồng bộ hóa ghi đè lại file nếu hệ thống có đơn bị hủy tự động lúc nạp
         try {
             fileHandler.write(this.allOrdersList);
         } catch (Exception ignored) {
         }
     }
 
-    /**
-     * Đặt đơn hàng mới nhập từ tầng View
-     */
     public boolean registerNewOrder(Order newOrder) {
-        // Tạm thời đẩy vào bộ nhớ RAM
         this.allOrdersList.add(newOrder);
         this.orderLookupMap.put(newOrder.getOrderId(), newOrder);
 
@@ -104,16 +106,11 @@ public class OrderController {
             this.waitingOrderFEFOQueue.enqueue(newOrder);
         }
 
-        // Kích hoạt hộp thoại hỏi người dùng có muốn lưu file không
         boolean isSaved = storageHandler.askAndSave(this.allOrdersList);
 
         if (!isSaved) {
-            // Nghiệp vụ: Nếu người dùng chọn 'N' (hoặc ghi file lỗi), coi như đơn CHƯA TỪNG TỒN TẠI
-            // Thực hiện bóc dỡ ngay lập tức khỏi RAM hệ thống
             this.allOrdersList.remove(newOrder);
             this.orderLookupMap.remove(newOrder.getOrderId());
-
-            // Xây dựng lại hàng đợi FEFO để loại bỏ đơn ảo này
             rebuildFEFOQueue();
             System.out.println("System: Order creation rolled back. RAM inventory synchronized.");
             return false;
@@ -122,18 +119,17 @@ public class OrderController {
     }
 
     private void rebuildFEFOQueue() {
-        PriorityQueue<Order> newQueue = new PriorityQueue<>(waitingOrderFEFOQueue.getComparator());
+        // Clear hàng đợi cũ để tránh trùng lặp dữ liệu rác
+        while (!waitingOrderFEFOQueue.isEmpty()) {
+            waitingOrderFEFOQueue.dequeueMin();
+        }
         for (Order o : allOrdersList) {
             if (o.getStatus().equals("Pending") || o.getStatus().equals("Waiting")) {
-                newQueue.enqueue(o);
+                waitingOrderFEFOQueue.enqueue(o);
             }
         }
-        // Giả định bạn bổ sung getter hoặc gán trực tiếp hàng đợi mới
     }
 
-    /**
-     * Thuật toán bốc kho tự động hàng loạt nguyên tử (Atomic Reservation FEFO)
-     */
     public void processAllWaitingOrders() {
         System.out.println("\n--- RUNNING AUTO FEFO ALLOCATION ---");
         List<Order> deferredList = new ArrayList<>();
@@ -176,81 +172,116 @@ public class OrderController {
         }
     }
 
+    /**
+     * ĐÃ SỬA: Thuật toán bốc kho tự động nguyên tử chuẩn hóa giải thuật mô
+     * phỏng
+     */
     private boolean tryAtomicReservation(Order order) {
+        // --- ĐOẠN CODE IN KIỂM TRA (XÓA SAU KHI ĐÃ CHẠY ĐƯỢC) ---
+        System.out.println("[DEBUG] --- KIỂM TRA ĐỒNG BỘ KHO KHI XUẤT ĐƠN " + order.getOrderId() + " ---");
+        System.out.println("-> Số lượng lô hàng hiện có trên RAM: " + globalInventoryMap.size());
+        for (InventoryItem item : globalInventoryMap.values()) {
+            System.out.println("   + Lô: " + item.getBatchId() + " | SKU: " + item.getSku() + " | Số lượng: " + item.getQuantity());
+        }
+        // -------------------------------------------------------
         LinkedList<OrderItem> requiredItems = order.getItemsToPick();
         List<ReservationRecord> tempReservations = new ArrayList<>();
-        java.util.PriorityQueue<InventoryItem> simulationHeap = new java.util.PriorityQueue<>(globalExpiryHeap);
 
+        // Tạo một bản đồ ảo (Simulation Map) sao chép số lượng hiện tại để trừ nháp trên RAM
+        HashMap<String, Integer> simulationQtyMap = new HashMap<>();
+        for (InventoryItem item : globalInventoryMap.values()) {
+            simulationQtyMap.put(item.getBatchId(), item.getQuantity());
+        }
+
+        // BƯỚC 1: CHẠY MÔ PHỎNG KIỂM TRA TOÀN BỘ ĐƠN HÀNG
         for (int i = 0; i < requiredItems.size(); i++) {
             OrderItem orderItem = requiredItems.get(i);
             String targetSku = orderItem.getSku();
             int neededQty = orderItem.getQuantity();
 
+            // Lọc ra các lô hàng thực tế thuộc SKU này
             List<InventoryItem> targetSkuBatches = new ArrayList<>();
-            while (!simulationHeap.isEmpty()) {
-                InventoryItem batch = simulationHeap.poll();
-                if (batch.getSku().equals(targetSku)) {
-                    targetSkuBatches.add(batch);
+            for (InventoryItem item : globalInventoryMap.values()) {
+                if (item.getSku().trim().equalsIgnoreCase(targetSku.trim()) && simulationQtyMap.get(item.getBatchId()) > 0) {
+                    targetSkuBatches.add(item);
                 }
             }
 
+            // Sắp xếp các lô hàng của SKU này theo chiến lược FEFO (Cận hạn dùng lên trước)
+            Collections.sort(targetSkuBatches, new Comparator<InventoryItem>() {
+                @Override
+                public int compare(InventoryItem o1, InventoryItem o2) {
+                    return o1.compareTo(o2); // Tận dụng hàm compareTo theo hạn sử dụng có sẵn của bạn
+                }
+            });
+
+            // Tính tổng số lượng hàng khả dụng trong kho ảo mô phỏng
             int availableStock = 0;
             for (InventoryItem b : targetSkuBatches) {
-                availableStock += b.getQuantity();
+                availableStock += simulationQtyMap.get(b.getBatchId());
             }
 
+            // RÀNG BUỘC NGUYÊN TỬ: Nếu kho ảo không đủ đáp ứng, lập tức hủy bỏ toàn bộ đơn hàng
             if (availableStock < neededQty) {
-                return false; // Thất bại nguyên tử toàn đơn
+                System.out.println("-> [THẤT BẠI FEFO] Đơn hàng " + order.getOrderId() + " không thể xuất kho!");
+                System.out.println("   Mã hàng bị thiếu: [" + targetSku + "]");
+                System.out.println("   Số lượng đơn cần: " + neededQty + " | Tổng kho hiện có: " + availableStock);
+                return false;
             }
+
+            // Tiến hành trừ nháp trên kho ảo mô phỏng
             for (InventoryItem batch : targetSkuBatches) {
                 if (neededQty <= 0) {
                     break;
                 }
-                if (batch.getQuantity() <= neededQty) {
-                    neededQty -= batch.getQuantity();
-                    tempReservations.add(new ReservationRecord(batch.getBatchId(), batch.getQuantity()));
-                    batch.setQuantity(0);
+
+                int currentSimQty = simulationQtyMap.get(batch.getBatchId());
+                if (currentSimQty <= neededQty) {
+                    neededQty -= currentSimQty;
+                    tempReservations.add(new ReservationRecord(batch.getBatchId(), currentSimQty));
+                    simulationQtyMap.put(batch.getBatchId(), 0);
                 } else {
+                    simulationQtyMap.put(batch.getBatchId(), currentSimQty - neededQty);
                     tempReservations.add(new ReservationRecord(batch.getBatchId(), neededQty));
-                    batch.setQuantity(batch.getQuantity() - neededQty);
                     neededQty = 0;
                 }
             }
-
-            for (InventoryItem b : targetSkuBatches) {
-                if (b.getQuantity() > 0) {
-                    simulationHeap.add(b);
-                }
-            }
         }
-//      1. Khai báo thêm TransactionController bên trong OrderController (để gọi sang)
-//       (Bạn có thể truyền txController vào qua Constructor của OrderController nhé)
 
-//      2. Cập nhật đoạn cuối hàm tryAtomicReservation(Order order) như sau:
-//      ... [Đoạn code mô phỏng FEFO phía trên giữ nguyên] ...
-        // COMMIT THẬT
+        // BƯỚC 2: COMMIT THẬT VÀO HỆ THỐNG & GHI LOG TRANSACTION
         for (ReservationRecord record : tempReservations) {
             InventoryItem realBatch = globalInventoryMap.get(record.batchId);
             realBatch.setQuantity(realBatch.getQuantity() - record.pickedQty);
-            // === ĐOẠN THÊM MỚI: TỰ ĐỘNG GHI NHẬT KÝ KHI XUẤT KHO THÀNH CÔNG ===
-            String txId = "TX-" + System.currentTimeMillis() + "-" + record.batchId; // Tạo mã TX duy nhất
-            Transaction newTx = new Transaction(txId, order.getOrderId(), "EXPORT", realBatch.getSku(), record.batchId, record.pickedQty, LocalDateTime.now());
-            // Gọi sang controller của bạn để nạp vào SinglyLinkedList trên RAM
+
+            // TẠO MÃ GIAO DỊCH DUY NHẤT
+            String txId = "TX-" + System.currentTimeMillis() + "-" + record.batchId;
+
+            // ĐÃ SỬA: Ép đúng thứ tự Constructor của bạn: (id, orderId, type, sku, batchId, quantity, date)
+            Transaction newTx = new Transaction(
+                    txId,
+                    order.getOrderId(),
+                    "EXPORT",
+                    realBatch.getSku(),
+                    record.batchId,
+                    record.pickedQty,
+                    LocalDateTime.now()
+            );
+
+            // Đẩy vào danh sách liên kết đơn trên RAM của bạn
             this.tranController.addTransaction(newTx);
-            // =====================================================================
+
+            // Nếu lô hàng đã bị bốc hết sạch số lượng, xóa bỏ khỏi bản đồ kho vật lý
             if (realBatch.getQuantity() == 0) {
                 globalInventoryMap.remove(record.batchId);
             }
         }
 
+        // ĐỒNG BỘ HÓA LẠI HEAP KHO CHÍNH XÁC SAU KHI CÓ BIẾN ĐỘNG
         globalExpiryHeap.clear();
         globalExpiryHeap.addAll(globalInventoryMap.values());
         return true;
     }
 
-    /**
-     * Chỉnh sửa trạng thái đơn thủ công có ràng buộc kiểm tra
-     */
     public boolean updateOrderStatusManual(String orderId, String newStatus) {
         Order order = orderLookupMap.get(orderId);
         if (order == null) {
@@ -284,7 +315,6 @@ public class OrderController {
         System.out.println("Stock items refunded successfully.");
     }
 
-    // Các hàm phục vụ View kết xuất dữ liệu hiển thị
     public List<Order> getAllOrdersList() {
         return allOrdersList;
     }

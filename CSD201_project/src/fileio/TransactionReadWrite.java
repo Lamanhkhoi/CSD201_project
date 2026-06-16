@@ -42,7 +42,7 @@ public class TransactionReadWrite implements IFileReadWrite<Transaction, SinglyL
                             parts[3],
                             parts[4],
                             Integer.parseInt(parts[5]),
-                            LocalDateTime.parse(parts[4]));
+                            LocalDateTime.parse(parts[6]));
                     history.addLast(tx);
                 }
             }

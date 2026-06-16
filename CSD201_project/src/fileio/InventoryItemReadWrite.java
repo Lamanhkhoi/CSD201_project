@@ -12,7 +12,7 @@ import java.util.List;
 
 public class InventoryItemReadWrite implements IFileReadWrite<InventoryItem, List<InventoryItem>> {
 
-    private static final String FILE_PATH = "inventory.txt";
+    private static final String FILE_PATH = "data/inventory.txt";
 
     @Override
     public List<InventoryItem> read() {

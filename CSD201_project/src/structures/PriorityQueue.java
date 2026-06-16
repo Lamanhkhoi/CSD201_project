@@ -4,17 +4,23 @@ import java.util.Comparator;
 
 public class PriorityQueue<E> {
 
-    private E[] heap;             
-    private int size;             
-    private int capacity;         
-    private Comparator<E> comparator; 
-
+    private E[] heap;
+    private int size;
+    private int capacity;
+    private Comparator<E> comparator;
 
     public PriorityQueue(Comparator<E> comparator) {
-        this.capacity = 16; 
-        this.heap = (E[]) new Object[capacity]; 
+        this.capacity = 16;
+        this.heap = (E[]) new Object[capacity];
         this.size = 0;
         this.comparator = comparator;
+    }
+
+    public PriorityQueue() {
+        this.capacity = 16;
+        this.heap = (E[]) new Object[capacity];
+        this.size = 0;
+        this.comparator = null;
     }
 
     public int size() {
@@ -48,7 +54,7 @@ public class PriorityQueue<E> {
     /*
      Lấy ra và xóa bỏ phần tử có độ ưu tiên cao nhất (gốc Heap index 0). Tự
      động đưa phần tử cuối lên và sàng xuống để tái lập đặc tính Min-Heap.
-    */
+     */
     public E dequeueMin() {
         if (isEmpty()) {
             return null;
@@ -65,16 +71,25 @@ public class PriorityQueue<E> {
         return minElement;
     }
 
+    // Tự động quyết định cách so sánh dựa trên việc có Comparator hay không
+    private int compareElements(E first, E second) {
+        if (this.comparator != null) {
+            return this.comparator.compare(first, second);
+        }
+        // Nếu không có Comparator, ép kiểu phần tử về Comparable giống hệt java.util
+        return ((Comparable<? super E>) first).compareTo(second);
+    }
+
     /*
      Thuật toán sàng lên (Up-Heap / Sift-Up): Di chuyển một nút từ dưới lên
      trên cho đến khi nó lớn hơn hoặc bằng nút cha của nó.
-    */
+     */
     private void upHeap(int index) {
         while (index > 0) {
             int parentIndex = (index - 1) / 2; // Công thức tìm vị trí nút cha trong mảng phẳng
 
             // Nếu nút hiện tại lớn hơn hoặc bằng nút cha -> Đã đạt cấu trúc Min-Heap, dừng lại
-            if (comparator.compare(heap[index], heap[parentIndex]) >= 0) {
+            if (compareElements(heap[index], heap[parentIndex]) >= 0) {
                 break;
             }
 
@@ -86,7 +101,7 @@ public class PriorityQueue<E> {
     /*
      Thuật toán sàng xuống (Down-Heap / Sift-Down): Di chuyển một nút từ gốc
      xuống dưới cho đến khi nó nhỏ hơn hoặc bằng cả 2 nút con của nó.
-    */
+     */
     private void downHeap(int index) {
         while (2 * index + 1 < size) { // Vòng lặp chạy khi nút hiện tại vẫn còn ít nhất 1 nút con trái
             int leftChild = 2 * index + 1;
@@ -94,12 +109,12 @@ public class PriorityQueue<E> {
             int smallestChild = leftChild; // Giả định ban đầu con trái là nút nhỏ nhất
 
             // Nếu tồn tại con phải và con phải có độ ưu tiên cao hơn (nhỏ hơn) con trái
-            if (rightChild < size && comparator.compare(heap[rightChild], heap[leftChild]) < 0) {
-                smallestChild = rightChild; // Cập nhật nút nhỏ nhất là con phải
+            if (rightChild < size && compareElements(heap[rightChild], heap[leftChild]) < 0) {
+                smallestChild = rightChild;
             }
 
             // Nếu nút cha hiện tại đã nhỏ hơn hoặc bằng nút con nhỏ nhất -> Đạt cấu trúc, dừng lại
-            if (comparator.compare(heap[index], heap[smallestChild]) <= 0) {
+            if (compareElements(heap[index], heap[smallestChild]) <= 0) {
                 break;
             }
 
@@ -119,5 +134,25 @@ public class PriorityQueue<E> {
         E[] newHeap = (E[]) new Object[capacity];
         System.arraycopy(heap, 0, newHeap, 0, size);
         this.heap = newHeap;
+    }
+
+    // Xóa sạch tất cả các phần tử trong hàng đợi
+    public void clear() {
+        for (int i = 0; i < size; i++) {
+            heap[i] = null;
+        }
+        this.size = 0;
+    }
+
+    // Thêm toàn bộ các phần tử từ một danh sách (Iterable) vào hàng đợi
+    public void addAll(Iterable<? extends E> elements) {
+        if (elements == null) {
+            return;
+        }
+        for (E element : elements) {
+            if (element != null) {
+                enqueue(element);
+            }
+        }
     }
 }

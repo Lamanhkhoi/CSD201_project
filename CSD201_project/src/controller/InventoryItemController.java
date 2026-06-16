@@ -1,5 +1,6 @@
 package controller;
 
+import java.time.LocalDateTime;
 import utilities.StorageHandler;
 import model.InventoryItem;
 import structures.PriorityQueue;
@@ -7,6 +8,7 @@ import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Comparator;
+import model.Transaction;
 
 public class InventoryItemController {
 
@@ -14,11 +16,12 @@ public class InventoryItemController {
     private PriorityQueue<InventoryItem> expiryHeap;
     private List<InventoryItem> inventoryList;
     private StorageHandler<InventoryItem, List<InventoryItem>> storageHandler;
-
-    public InventoryItemController(StorageHandler<InventoryItem, List<InventoryItem>> storageHandler) {
+    private final TransactionController transactionController;
+    public InventoryItemController(StorageHandler<InventoryItem, List<InventoryItem>> storageHandler, TransactionController transactionController) {
         this.storageHandler = storageHandler;
         this.inventoryMap = new HashMap<>();
         this.inventoryList = new ArrayList<>();
+        this.transactionController = transactionController;
         this.expiryHeap = new PriorityQueue<>(new Comparator<InventoryItem>() {
             @Override
             public int compare(InventoryItem o1, InventoryItem o2) {
@@ -54,6 +57,24 @@ public class InventoryItemController {
         inventoryList.add(newItem);
         expiryHeap.enqueue(newItem);
         System.out.println("-> [Hệ thống] Nhập kho thành công mã lô: " + newItem.getBatchId());
+        // === ĐOẠN THÊM MỚI 2: TỰ ĐỘNG TẠO TRANSACTION NHẬP KHO ===
+       String txId = "TX-IMP-" + System.currentTimeMillis() + "-" + newItem.getBatchId();
+        
+        // Vì nhập trực tiếp từ nhà cung cấp chưa có đơn xuất, orderId ta truyền "N/A"
+        Transaction newTx = new Transaction(
+            txId,                         // 1. transactionId (String)
+            "N/A",                        // 2. orderId (String)
+            "IMPORT",                     // 3. type (String)
+            newItem.getSku(),             // 4. sku (String)
+            newItem.getBatchId(),         // 5. batchId (String)
+            newItem.getQuantity(),        // 6. quantity (int)
+            LocalDateTime.now()           // 7. date (LocalDateTime)
+        );
+        
+        // Đẩy thẳng sang SinglyLinkedList trên RAM của bạn
+        this.transactionController.addTransaction(newTx);
+        System.out.println("-> [Hệ thống] Đã tự động lập biên bản nhật ký nhập kho (" + txId + ").");
+        // =========================================================
         triggerSave();
     }
 
