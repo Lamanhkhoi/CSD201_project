@@ -1,33 +1,16 @@
 package controller;
 
 import model.Product;
-import fileio.ProductReadWrite;
 import structures.SinglyLinkedList;
-import utilities.StorageHandler;
 
 public class ProductController {
+
     private SinglyLinkedList<Product> productList;
-    private final ProductReadWrite fileIO;
-    // Khai báo StorageHandler nhận tham số tập hợp là SinglyLinkedList
-    private final StorageHandler<Product, SinglyLinkedList<Product>> storageHandler; 
 
-    public ProductController() {
-        this.productList = new SinglyLinkedList<>();
-        this.fileIO = new ProductReadWrite();
-        this.storageHandler = new StorageHandler<>(fileIO); // Sạch lỗi dòng 18 hoàn toàn
-        loadData();
+    public ProductController(SinglyLinkedList<Product> productList) {
+        this.productList = productList;
     }
 
-    // Tải dữ liệu trực tiếp từ file vật lý gán vào cấu trúc của nhóm
-    private void loadData() {
-        try {
-            this.productList = fileIO.read();
-        } catch (Exception e) {
-            System.out.println("Lỗi khi tải dữ liệu sản phẩm: " + e.getMessage());
-        }
-    }
-
-    // Cung cấp danh sách cho View hiển thị
     public SinglyLinkedList<Product> getProductList() {
         return this.productList;
     }
@@ -58,7 +41,7 @@ public class ProductController {
     public boolean deleteProduct(String sku) {
         SinglyLinkedList<Product> newList = new SinglyLinkedList<>();
         boolean found = false;
-        
+
         SinglyLinkedList.Node<Product> current = productList.getHead();
         while (current != null) {
             Product p = current.getElement();
@@ -75,10 +58,5 @@ public class ProductController {
             return true;
         }
         return false;
-    }
-
-    // Truyền trực tiếp productList vào hệ thống lưu trữ chung mà không cần convert nữa
-    public void askToSaveData() {
-        storageHandler.askAndSave(productList);
     }
 }

@@ -5,8 +5,6 @@ import model.OrderItem;
 import model.InventoryItem;
 import structures.LinkedList;
 import structures.PriorityQueue;
-import fileio.IFileReadWrite;
-import utilities.StorageHandler;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -24,48 +22,27 @@ public class OrderController {
     // Kết nối đến module Kho vật lý của thành viên khác
     private final HashMap<String, InventoryItem> globalInventoryMap;
     private final PriorityQueue<InventoryItem> globalExpiryHeap;
-
-    private final StorageHandler<Order, List<Order>> storageHandler;
-    private final IFileReadWrite<Order, List<Order>> fileHandler;
     private final TransactionController tranController;
 
-    public OrderController(HashMap<String, InventoryItem> globalInventoryMap,
+    public OrderController(List<Order> allOrdersList,
+            HashMap<String, InventoryItem> globalInventoryMap,
             PriorityQueue<InventoryItem> globalExpiryHeap,
-            IFileReadWrite<Order, List<Order>> fileHandler, TransactionController tranController) {
+            TransactionController tranController) { 
 
+        this.allOrdersList = allOrdersList;
         this.globalInventoryMap = globalInventoryMap;
         this.globalExpiryHeap = globalExpiryHeap;
-        this.fileHandler = fileHandler;
-        this.storageHandler = new StorageHandler<>(fileHandler);
-
-        this.allOrdersList = new ArrayList<>();
-        this.orderLookupMap = new HashMap<>();
         this.tranController = tranController;
+
+        this.orderLookupMap = new HashMap<>();
         this.waitingOrderFEFOQueue = new PriorityQueue<>(new Comparator<Order>() {
             @Override
             public int compare(Order o1, Order o2) {
-                int cmp = o1.getLatestDate().compareTo(o2.getLatestDate());
-                if (cmp != 0) {
-                    return cmp;
-                }
-                cmp = o1.getCreatedDate().compareTo(o2.getCreatedDate());
-                if (cmp != 0) {
-                    return cmp;
-                }
-                return o1.getOrderId().compareTo(o2.getOrderId());
+                return o1.getExpectedDate().compareTo(o2.getExpectedDate());
             }
         });
-        loadSystemData();
-    }
 
-    private void loadSystemData() {
-        try {
-            List<Order> loadedOrders = fileHandler.read();
-            initializeData(loadedOrders);
-            System.out.println("System Core: Order entries successfully initialized.");
-        } catch (Exception e) {
-            System.out.println("System Core Warning: Failed to boot file database. " + e.getMessage());
-        }
+        rebuildFEFOQueue();
     }
 
     public void initializeData(List<Order> loadedOrders) {
@@ -86,36 +63,17 @@ public class OrderController {
 
             this.allOrdersList.add(order);
             this.orderLookupMap.put(order.getOrderId(), order);
-
-            if (order.getStatus().equals("Pending") || order.getStatus().equals("Waiting")) {
-                this.waitingOrderFEFOQueue.enqueue(order);
-            }
         }
-
-        try {
-            fileHandler.write(this.allOrdersList);
-        } catch (Exception ignored) {
-        }
+        rebuildFEFOQueue();
     }
 
-    public boolean registerNewOrder(Order newOrder) {
+    public void registerNewOrder(Order newOrder) {
         this.allOrdersList.add(newOrder);
         this.orderLookupMap.put(newOrder.getOrderId(), newOrder);
 
         if (newOrder.getStatus().equals("Pending") || newOrder.getStatus().equals("Waiting")) {
             this.waitingOrderFEFOQueue.enqueue(newOrder);
         }
-
-        boolean isSaved = storageHandler.askAndSave(this.allOrdersList);
-
-        if (!isSaved) {
-            this.allOrdersList.remove(newOrder);
-            this.orderLookupMap.remove(newOrder.getOrderId());
-            rebuildFEFOQueue();
-            System.out.println("System: Order creation rolled back. RAM inventory synchronized.");
-            return false;
-        }
-        return true;
     }
 
     private void rebuildFEFOQueue() {
@@ -133,7 +91,6 @@ public class OrderController {
     public void processAllWaitingOrders() {
         System.out.println("\n--- RUNNING AUTO FEFO ALLOCATION ---");
         List<Order> deferredList = new ArrayList<>();
-        boolean stateChanged = false;
 
         while (!waitingOrderFEFOQueue.isEmpty()) {
             Order currentOrder = waitingOrderFEFOQueue.dequeueMin();
@@ -144,7 +101,6 @@ public class OrderController {
             }
 
             boolean success = tryAtomicReservation(currentOrder);
-            stateChanged = true;
 
             if (success) {
                 currentOrder.setStatus("Ready");
@@ -160,15 +116,6 @@ public class OrderController {
 
         for (Order o : deferredList) {
             waitingOrderFEFOQueue.enqueue(o);
-        }
-
-        if (stateChanged) {
-            try {
-                fileHandler.write(this.allOrdersList);
-                System.out.println("System: Batch database updated in file database.");
-            } catch (Exception e) {
-                System.out.println("System error saving log batch.");
-            }
         }
     }
 
@@ -303,16 +250,52 @@ public class OrderController {
         }
 
         order.setStatus(newStatus);
-        try {
-            fileHandler.write(this.allOrdersList);
-            return true;
-        } catch (Exception e) {
-            return false;
-        }
+        rebuildFEFOQueue();
+        return true;
     }
 
     private void refundItemsToInventory(Order order) {
-        System.out.println("Stock items refunded successfully.");
+        // 1. Lấy danh sách các mặt hàng cần hoàn trả từ đơn hàng
+        LinkedList<OrderItem> itemsToRefund = order.getItemsToPick();
+
+        // 2. Duyệt qua từng mặt hàng trong đơn
+        for (int i = 0; i < itemsToRefund.size(); i++) {
+            OrderItem orderItem = itemsToRefund.get(i);
+            String sku = orderItem.getSku();
+            int refundQty = orderItem.getQuantity();
+
+            // 3. Tìm lô hàng hiện có trong kho (globalInventoryMap) có cùng mã SKU để cộng trả lại
+            boolean refunded = false;
+            for (model.InventoryItem inventoryItem : globalInventoryMap.values()) {
+                if (inventoryItem.getSku().trim().equalsIgnoreCase(sku.trim())) {
+                    // Cộng trả lại số lượng vào lô hàng này trên RAM
+                    inventoryItem.setQuantity(inventoryItem.getQuantity() + refundQty);
+                    refunded = true;
+                    break; // Tìm thấy lô hàng cùng SKU đầu tiên là cộng trả vào ngay
+                }
+            }
+
+            // 4. Trường hợp kho đã sạch bóng SKU này (không tìm thấy lô nào cũ)
+            if (!refunded) {
+                // Tạo một lô hàng hoàn trả mới và đẩy vào Map kho vật lý
+                String refundBatchId = "REF-" + order.getOrderId() + "-" + sku;
+                InventoryItem newRefundBatch = new InventoryItem(
+                        refundBatchId,
+                        sku,
+                        refundQty,
+                        java.time.LocalDate.now(),
+                        java.time.LocalDate.now().plusMonths(6),
+                        "KỆ-HOÀN"
+                );
+                globalInventoryMap.put(refundBatchId, newRefundBatch);
+            }
+        }
+
+        // 5. Đồng bộ hóa lại Heap cận hạn (globalExpiryHeap) của thành viên khác sau khi kho có biến động
+        globalExpiryHeap.clear();
+        globalExpiryHeap.addAll(globalInventoryMap.values());
+
+        System.out.println("System: Stock items for Order [" + order.getOrderId() + "] refunded successfully.");
     }
 
     public List<Order> getAllOrdersList() {
