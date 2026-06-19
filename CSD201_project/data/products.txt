@@ -1,0 +1,2 @@
+p123;MILK;th?c ph?m;Vinamilk;10000.0
+p001;cam;tr�i c�y;T�ng Beo;100000.0

@@ -10,6 +10,7 @@ import java.util.Comparator;
 import model.Transaction;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import controller.ProductController;
 
 public class InventoryItemController {
 
@@ -31,7 +32,7 @@ public class InventoryItemController {
     // LOGIC XỬ LÝ NGHIỆP VỤ (BUSINESS LOGIC)
     // ==============================================================
     public boolean receiveNewItem(InventoryItem newItem) {
-        // Kiểm tra trùng mã lô hàng để tránh ghi đè dữ liệu map
+        // Kiểm tra trùng mã lô hàng để tránh ghi đè dữ liệu map 
         if (inventoryMap.containsKey(newItem.getBatchId())) {
             System.out.println("-> [Lỗi] Mã lô hàng '" + newItem.getBatchId() + "' đã tồn tại trên hệ thống!");
             return false;
