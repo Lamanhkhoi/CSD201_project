@@ -12,19 +12,21 @@ public class Order {
     private LocalDateTime createdDate;      
     private LocalDateTime expectedDate;    
     private LocalDateTime latestDate;      
-    private String status;                  // Trạng thái: Pending, Waiting, Ready, Delivery, Cancel, Completed
+    private String status;                  
     private double totalAmount;             
     private LinkedList<OrderItem> itemsToPick; 
-    private int retryCount;                 // Số lần bốc kho thử lại (Chặn vòng lặp vô hạn khi thiếu hàng kéo dài)
+    private int retryCount;
+    private boolean isActive;
 
     public Order() {
         this.itemsToPick = new LinkedList<>();
         this.retryCount = 0;
+        this.isActive = true;
     }
 
     public Order(String orderId, String customerName, String phone, String address,
             LocalDateTime createdDate, LocalDateTime expectedDate, LocalDateTime latestDate,
-            String status, double totalAmount, LinkedList<OrderItem> itemsToPick) {
+            String status, double totalAmount, LinkedList<OrderItem> itemsToPick, boolean isActive) {
         this.orderId = orderId;
         this.customerName = customerName;
         this.phone = phone;
@@ -36,6 +38,7 @@ public class Order {
         this.totalAmount = totalAmount;
         this.itemsToPick = itemsToPick;
         this.retryCount = 0;
+        this.isActive = isActive;
     }
 
     public String getOrderId() {
@@ -124,6 +127,14 @@ public class Order {
 
     public void setRetryCount(int retryCount) {
         this.retryCount = retryCount;
+    }
+
+    public boolean isActive() {
+        return isActive;
+    }
+
+    public void setIsActive(boolean isActive) {
+        this.isActive = isActive;
     }
 
     // Tăng số lần thử bốc kho lên 1 đơn vị khi xử lý thất bại dở dang.

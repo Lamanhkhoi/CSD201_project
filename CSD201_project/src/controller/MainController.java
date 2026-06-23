@@ -29,20 +29,19 @@ public class MainController {
     private final OrderReadWrite orderFileHandler;
     private final TransactionReadWrite tranFileHandler;
 
-    // 3. Các StorageHandlers hỗ trợ Phương án B (Hỏi và Lưu)
+    // 3. StorageHandlers
     private final StorageHandler<Product, SinglyLinkedList<Product>> productStorage;
     private final StorageHandler<InventoryItem, List<InventoryItem>> inventoryStorage;
     private final StorageHandler<Order, List<Order>> orderStorage;
     private final StorageHandler<Transaction, SinglyLinkedList<Transaction>> tranStorage;
 
-    // 4. Hệ thống các SubController lõi
+    // 4. SubController
     private final ProductController productController;
     private final InventoryItemController inventoryController;
     private final OrderController orderController;
     private final TransactionController transactionController;
 
     public MainController() {
-        // Khởi tạo các cấu trúc dữ liệu trống
         this.productList = new SinglyLinkedList<>();
         this.inventoryMap = new HashMap<>();
         this.inventoryList = new ArrayList<>();
