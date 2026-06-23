@@ -7,6 +7,7 @@ import java.time.format.ResolverStyle;
 import java.util.Scanner;
 
 public class Inputter {
+
     private static final Scanner sc = new Scanner(System.in);
     // Sử dụng uuuu đi với STRICT là hoàn toàn chính xác cho LocalDate
     private static final DateTimeFormatter FMT = DateTimeFormatter.ofPattern("dd/MM/uuuu")
@@ -60,7 +61,9 @@ public class Inputter {
         System.out.print(msg);
         while (true) {
             String s = sc.nextLine().trim();
-            if (s.isEmpty()) return null;
+            if (s.isEmpty()) {
+                return null;
+            }
             try {
                 return Integer.parseInt(s);
             } catch (NumberFormatException e) {
@@ -74,7 +77,9 @@ public class Inputter {
         System.out.print(msg);
         while (true) {
             String s = sc.nextLine().trim();
-            if (s.isEmpty()) return null;
+            if (s.isEmpty()) {
+                return null;
+            }
             try {
                 return Double.parseDouble(s);
             } catch (NumberFormatException e) {
@@ -88,7 +93,9 @@ public class Inputter {
         System.out.print(msg);
         while (true) {
             String s = sc.nextLine().trim();
-            if (s.isEmpty()) return null;
+            if (s.isEmpty()) {
+                return null;
+            }
             try {
                 return LocalDate.parse(s, FMT);
             } catch (DateTimeParseException e) {
@@ -96,5 +103,9 @@ public class Inputter {
                 System.out.print(msg);
             }
         }
+    }
+
+    public static String formatDate(LocalDate date) {
+        return date.format(FMT);
     }
 }

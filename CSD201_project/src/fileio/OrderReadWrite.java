@@ -36,10 +36,11 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
                 LocalDateTime latestDate = LocalDateTime.parse(parts[6]);
                 String status = parts[7];
                 double totalAmount = Double.parseDouble(parts[8]);
+                boolean isActive = Boolean.parseBoolean(parts[9]);
 
                 LinkedList<OrderItem> itemsToPick = new LinkedList<>();
-                if (parts.length > 9 && !parts[9].equalsIgnoreCase("NONE")) {
-                    String[] itemsArray = parts[9].split(",");
+                if (parts.length > 10 && !parts[10].equalsIgnoreCase("NONE")) {
+                    String[] itemsArray = parts[10].split(",");
                     for (String itemStr : itemsArray) {
                         String[] itemParts = itemStr.split(":");
                         itemsToPick.addLast(new OrderItem(itemParts[0], Integer.parseInt(itemParts[1])));
@@ -47,7 +48,7 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
                 }
 
                 Order order = new Order(orderId, customerName, phone, address, 
-                        createdDate, expectedDate, latestDate, status, totalAmount, itemsToPick);
+                        createdDate, expectedDate, latestDate, status, totalAmount, itemsToPick, isActive);
                 list.add(order);
             }
         }
@@ -67,7 +68,8 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
                   .append(o.getExpectedDate().toString()).append(";")
                   .append(o.getLatestDate().toString()).append(";")
                   .append(o.getStatus()).append(";")
-                  .append(o.getTotalAmount()).append(";");
+                  .append(o.getTotalAmount()).append(";")
+                  .append(o.isActive()).append(";");
 
                 LinkedList<OrderItem> items = o.getItemsToPick();
                 if (items.isEmpty()) {

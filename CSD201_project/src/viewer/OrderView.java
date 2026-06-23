@@ -27,7 +27,9 @@ public class OrderView {
         Object[] options = {
             "Đặt đơn hàng mới (Register New Order)",
             "Hiển thị & Tìm kiếm Đơn hàng (Báo cáo chuyên sâu)",
+            "Cập nhật thông tin Đơn hàng (CRUD)",
             "Cập nhật trạng thái Đơn hàng thủ công",
+            "Xóa đơn hàng (Soft Delete)",
             "Kích hoạt hệ thống xuất kho tự động (Run Auto FEFO)",
             "Quay lại Menu chính (Back to Main Menu)"
         };
@@ -44,7 +46,7 @@ public class OrderView {
                     uiDisplayOrdersMenu();
                     break;
                 case 3:
-                    uiUpdateStatus();
+                    uiUpdateOrder();
                     break;
                 case 4:
                     orderController.processAllWaitingOrders();
@@ -52,7 +54,8 @@ public class OrderView {
                     mainController.saveInventory();
                     break;
                 case 5:
-                    return;
+                    uiDeleteOrder();
+                    break;
                 default:
                     System.out.println("Lựa chọn không hợp lệ!");
             }
@@ -108,7 +111,7 @@ public class OrderView {
 
         Order newOrder = new Order(orderId, name, phone, address,
                 LocalDateTime.now(), expected.atStartOfDay(), latest.atStartOfDay(),
-                "Pending", amount, itemsList);
+                "Pending", amount, itemsList, true);
 
         orderController.registerNewOrder(newOrder);
         System.out.println("Đăng ký đơn hàng thành công!");
@@ -255,7 +258,6 @@ public class OrderView {
         printOrderTable(sortedList);
     }
 
-    // Xuất danh sách sắp xếp tăng/giảm dần theo Hạn Định Giao Trễ Nhất (Latest Date)
     private void displayOrdersSortedByLatestDate() {
         List<Order> sortedList = new ArrayList<>(orderController.getAllOrdersList());
         if (sortedList.isEmpty()) {
@@ -301,14 +303,98 @@ public class OrderView {
         System.out.printf("TỔNG CỘNG: Tìm thấy %d bản ghi đơn hàng.\n", list.size());
     }
 
-    private void uiUpdateStatus() {
-        String id = Inputter.inputStr("Nhập mã đơn hàng cần sửa trạng thái: ");
-        if (orderController.getOrderById(id) == null) {
-            System.out.println("Thất bại: Mã đơn hàng không tồn tại!");
+    private void uiUpdateOrder() {
+        System.out.println("\n========== UPDATE ORDER ==========");
+        String id = Inputter.inputStr("Nhập mã đơn hàng cần cập nhật: ").toUpperCase();
+        Order oldOrder = orderController.getOrderById(id);
+        if (oldOrder == null) {
+            System.out.println("Không tìm thấy đơn hàng.");
             return;
         }
-        System.out.println("Các trạng thái hợp lệ: Pending, Waiting, Ready, Delivery, Cancel, Completed");
-        String status = Inputter.inputStr("Nhập trạng thái mới muốn chuyển đổi: ");
-        orderController.updateOrderStatusManual(id, status);
+        System.out.println("\n(Để trống nếu muốn giữ nguyên giá trị cũ)");
+        Order updatedOrder = new Order();
+        updatedOrder.setOrderId(oldOrder.getOrderId());
+
+        String customerName = Inputter.inputStr("Tên khách hàng [" + oldOrder.getCustomerName() + "]: ");
+        updatedOrder.setCustomerName(customerName.isEmpty() ? oldOrder.getCustomerName() : customerName);
+
+        String phone;
+        while (true) {
+            phone = Inputter.inputStr("Số điện thoại [" + oldOrder.getPhone() + "]: ");
+            if (phone.isEmpty()) {
+                phone = oldOrder.getPhone();
+                break;
+            }
+            if (phone.matches(Pattern.PHONE_PATTERN)) {
+                break;
+            }
+            System.out.println("Sai định dạng số điện thoại!");
+        }
+        updatedOrder.setPhone(phone);
+
+        String address = Inputter.inputStr("Địa chỉ [" + oldOrder.getAddress() + "]: ");
+        updatedOrder.setAddress(address.isEmpty() ? oldOrder.getAddress() : address);
+
+        LocalDate createdDate = Inputter.inputDateNullable("Ngày tạo [" + oldOrder.getCreatedDate().toLocalDate() + "] (dd/MM/yyyy): ");
+        if (createdDate == null) {
+            createdDate = oldOrder.getCreatedDate().toLocalDate();
+        }
+
+        LocalDate expectedDate = Inputter.inputDateNullable("Ngày giao dự kiến [" + oldOrder.getExpectedDate().toLocalDate() + "] (dd/MM/yyyy): ");
+        if (expectedDate == null) {
+            expectedDate = oldOrder.getExpectedDate().toLocalDate();
+        }
+
+        LocalDate latestDate = Inputter.inputDateNullable("Ngày giao trễ nhất [" + oldOrder.getLatestDate().toLocalDate() + "] (dd/MM/yyyy): ");
+
+        if (latestDate == null) {
+            latestDate = oldOrder.getLatestDate().toLocalDate();
+        }
+
+        if (expectedDate.isBefore(createdDate)) {
+            System.out.println("Ngày giao dự kiến phải sau hoặc bằng ngày tạo.");
+            return;
+        }
+
+        if (latestDate.isBefore(expectedDate)) {
+            System.out.println("Ngày giao trễ nhất phải sau hoặc bằng ngày giao dự kiến.");
+            return;
+        }
+
+        updatedOrder.setCreatedDate(createdDate.atStartOfDay());
+        updatedOrder.setExpectedDate(expectedDate.atStartOfDay());
+        updatedOrder.setLatestDate(latestDate.atStartOfDay());
+
+        boolean success = orderController.updateOrder(updatedOrder);
+        if (success) {
+            System.out.println("Cập nhật đơn hàng thành công.");
+            mainController.saveOrders();
+        } else {
+            System.out.println("Cập nhật đơn hàng thất bại.");
+        }
+    }
+
+    private void uiDeleteOrder() {
+        System.out.println("\n========== DELETE ORDER ==========");
+        String id = Inputter.inputStr("Nhập mã đơn hàng: ").toUpperCase();
+        Order order = orderController.getOrderById(id);
+        if (order == null) {
+            System.out.println("Không tìm thấy đơn hàng.");
+            return;
+        }
+        String confirm = Inputter.inputStr("Bạn có chắc muốn xóa? (Y/N): ");
+        if (!confirm.equalsIgnoreCase("Y")) {
+            System.out.println("Đã hủy thao tác.");
+            return;
+        }
+
+        boolean success = orderController.deleteOrder(id);
+        if (success) {
+            System.out.println("Đã xóa đơn hàng thành công.");
+            mainController.saveOrders();
+        } else {
+            System.out.println("Xóa thất bại.");
+        }
+
     }
 }

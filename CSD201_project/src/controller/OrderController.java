@@ -27,7 +27,7 @@ public class OrderController {
     public OrderController(List<Order> allOrdersList,
             HashMap<String, InventoryItem> globalInventoryMap,
             PriorityQueue<InventoryItem> globalExpiryHeap,
-            TransactionController tranController) { 
+            TransactionController tranController) {
 
         this.allOrdersList = allOrdersList;
         this.globalInventoryMap = globalInventoryMap;
@@ -70,6 +70,7 @@ public class OrderController {
     public void registerNewOrder(Order newOrder) {
         this.allOrdersList.add(newOrder);
         this.orderLookupMap.put(newOrder.getOrderId(), newOrder);
+        newOrder.setIsActive(true);
 
         if (newOrder.getStatus().equals("Pending") || newOrder.getStatus().equals("Waiting")) {
             this.waitingOrderFEFOQueue.enqueue(newOrder);
@@ -77,12 +78,11 @@ public class OrderController {
     }
 
     private void rebuildFEFOQueue() {
-        // Clear hàng đợi cũ để tránh trùng lặp dữ liệu rác
         while (!waitingOrderFEFOQueue.isEmpty()) {
             waitingOrderFEFOQueue.dequeueMin();
         }
         for (Order o : allOrdersList) {
-            if (o.getStatus().equals("Pending") || o.getStatus().equals("Waiting")) {
+            if (o.isActive() && (o.getStatus().equals("Pending") || o.getStatus().equals("Waiting"))) {
                 waitingOrderFEFOQueue.enqueue(o);
             }
         }
@@ -119,34 +119,26 @@ public class OrderController {
         }
     }
 
-    /**
-     * ĐÃ SỬA: Thuật toán bốc kho tự động nguyên tử chuẩn hóa giải thuật mô
-     * phỏng
-     */
     private boolean tryAtomicReservation(Order order) {
-        // --- ĐOẠN CODE IN KIỂM TRA (XÓA SAU KHI ĐÃ CHẠY ĐƯỢC) ---
         System.out.println("[DEBUG] --- KIỂM TRA ĐỒNG BỘ KHO KHI XUẤT ĐƠN " + order.getOrderId() + " ---");
         System.out.println("-> Số lượng lô hàng hiện có trên RAM: " + globalInventoryMap.size());
         for (InventoryItem item : globalInventoryMap.values()) {
             System.out.println("   + Lô: " + item.getBatchId() + " | SKU: " + item.getSku() + " | Số lượng: " + item.getQuantity());
         }
-        // -------------------------------------------------------
+
         LinkedList<OrderItem> requiredItems = order.getItemsToPick();
         List<ReservationRecord> tempReservations = new ArrayList<>();
 
-        // Tạo một bản đồ ảo (Simulation Map) sao chép số lượng hiện tại để trừ nháp trên RAM
         HashMap<String, Integer> simulationQtyMap = new HashMap<>();
         for (InventoryItem item : globalInventoryMap.values()) {
             simulationQtyMap.put(item.getBatchId(), item.getQuantity());
         }
 
-        // BƯỚC 1: CHẠY MÔ PHỎNG KIỂM TRA TOÀN BỘ ĐƠN HÀNG
         for (int i = 0; i < requiredItems.size(); i++) {
             OrderItem orderItem = requiredItems.get(i);
             String targetSku = orderItem.getSku();
             int neededQty = orderItem.getQuantity();
 
-            // Lọc ra các lô hàng thực tế thuộc SKU này
             List<InventoryItem> targetSkuBatches = new ArrayList<>();
             for (InventoryItem item : globalInventoryMap.values()) {
                 if (item.getSku().trim().equalsIgnoreCase(targetSku.trim()) && simulationQtyMap.get(item.getBatchId()) > 0) {
@@ -154,21 +146,18 @@ public class OrderController {
                 }
             }
 
-            // Sắp xếp các lô hàng của SKU này theo chiến lược FEFO (Cận hạn dùng lên trước)
             Collections.sort(targetSkuBatches, new Comparator<InventoryItem>() {
                 @Override
                 public int compare(InventoryItem o1, InventoryItem o2) {
-                    return o1.compareTo(o2); // Tận dụng hàm compareTo theo hạn sử dụng có sẵn của bạn
+                    return o1.compareTo(o2);
                 }
             });
 
-            // Tính tổng số lượng hàng khả dụng trong kho ảo mô phỏng
             int availableStock = 0;
             for (InventoryItem b : targetSkuBatches) {
                 availableStock += simulationQtyMap.get(b.getBatchId());
             }
 
-            // RÀNG BUỘC NGUYÊN TỬ: Nếu kho ảo không đủ đáp ứng, lập tức hủy bỏ toàn bộ đơn hàng
             if (availableStock < neededQty) {
                 System.out.println("-> [THẤT BẠI FEFO] Đơn hàng " + order.getOrderId() + " không thể xuất kho!");
                 System.out.println("   Mã hàng bị thiếu: [" + targetSku + "]");
@@ -176,7 +165,6 @@ public class OrderController {
                 return false;
             }
 
-            // Tiến hành trừ nháp trên kho ảo mô phỏng
             for (InventoryItem batch : targetSkuBatches) {
                 if (neededQty <= 0) {
                     break;
@@ -195,15 +183,10 @@ public class OrderController {
             }
         }
 
-        // BƯỚC 2: COMMIT THẬT VÀO HỆ THỐNG & GHI LOG TRANSACTION
         for (ReservationRecord record : tempReservations) {
             InventoryItem realBatch = globalInventoryMap.get(record.batchId);
             realBatch.setQuantity(realBatch.getQuantity() - record.pickedQty);
-
-            // TẠO MÃ GIAO DỊCH DUY NHẤT
             String txId = "TX-" + System.currentTimeMillis() + "-" + record.batchId;
-
-            // ĐÃ SỬA: Ép đúng thứ tự Constructor của bạn: (id, orderId, type, sku, batchId, quantity, date)
             Transaction newTx = new Transaction(
                     txId,
                     order.getOrderId(),
@@ -214,16 +197,12 @@ public class OrderController {
                     LocalDateTime.now()
             );
 
-            // Đẩy vào danh sách liên kết đơn trên RAM của bạn
             this.tranController.addTransaction(newTx);
-
-            // Nếu lô hàng đã bị bốc hết sạch số lượng, xóa bỏ khỏi bản đồ kho vật lý
             if (realBatch.getQuantity() == 0) {
                 globalInventoryMap.remove(record.batchId);
             }
         }
 
-        // ĐỒNG BỘ HÓA LẠI HEAP KHO CHÍNH XÁC SAU KHI CÓ BIẾN ĐỘNG
         globalExpiryHeap.clear();
         globalExpiryHeap.addAll(globalInventoryMap.values());
         return true;
@@ -254,30 +233,54 @@ public class OrderController {
         return true;
     }
 
+    public boolean updateOrder(Order updatedOrder) {
+        if (updatedOrder == null) {
+            return false;
+        }
+
+        Order existingOrder = orderLookupMap.get(updatedOrder.getOrderId());
+
+        if (existingOrder == null || !existingOrder.isActive()) {
+            return false;
+        }
+
+        if (existingOrder.getStatus().equalsIgnoreCase("Completed")) {
+            System.out.println("Error: Completed order cannot be updated.");
+            return false;
+        }
+
+        if (existingOrder.getLatestDate().isBefore(LocalDateTime.now())) {
+            System.out.println("Error: Order has expired.");
+            return false;
+        }
+        existingOrder.setCustomerName(updatedOrder.getCustomerName());
+        existingOrder.setPhone(updatedOrder.getPhone());
+        existingOrder.setAddress(updatedOrder.getAddress());
+
+        existingOrder.setCreatedDate(updatedOrder.getCreatedDate());
+        existingOrder.setExpectedDate(updatedOrder.getExpectedDate());
+        existingOrder.setLatestDate(updatedOrder.getLatestDate());
+        rebuildFEFOQueue();
+
+        return true;
+    }
+
     private void refundItemsToInventory(Order order) {
-        // 1. Lấy danh sách các mặt hàng cần hoàn trả từ đơn hàng
         LinkedList<OrderItem> itemsToRefund = order.getItemsToPick();
 
-        // 2. Duyệt qua từng mặt hàng trong đơn
         for (int i = 0; i < itemsToRefund.size(); i++) {
             OrderItem orderItem = itemsToRefund.get(i);
             String sku = orderItem.getSku();
             int refundQty = orderItem.getQuantity();
-
-            // 3. Tìm lô hàng hiện có trong kho (globalInventoryMap) có cùng mã SKU để cộng trả lại
             boolean refunded = false;
             for (model.InventoryItem inventoryItem : globalInventoryMap.values()) {
                 if (inventoryItem.getSku().trim().equalsIgnoreCase(sku.trim())) {
-                    // Cộng trả lại số lượng vào lô hàng này trên RAM
                     inventoryItem.setQuantity(inventoryItem.getQuantity() + refundQty);
                     refunded = true;
-                    break; // Tìm thấy lô hàng cùng SKU đầu tiên là cộng trả vào ngay
+                    break;
                 }
             }
-
-            // 4. Trường hợp kho đã sạch bóng SKU này (không tìm thấy lô nào cũ)
             if (!refunded) {
-                // Tạo một lô hàng hoàn trả mới và đẩy vào Map kho vật lý
                 String refundBatchId = "REF-" + order.getOrderId() + "-" + sku;
                 InventoryItem newRefundBatch = new InventoryItem(
                         refundBatchId,
@@ -290,20 +293,57 @@ public class OrderController {
                 globalInventoryMap.put(refundBatchId, newRefundBatch);
             }
         }
-
-        // 5. Đồng bộ hóa lại Heap cận hạn (globalExpiryHeap) của thành viên khác sau khi kho có biến động
         globalExpiryHeap.clear();
         globalExpiryHeap.addAll(globalInventoryMap.values());
 
         System.out.println("System: Stock items for Order [" + order.getOrderId() + "] refunded successfully.");
     }
 
+    public boolean deleteOrder(String orderId) {
+
+        Order order = orderLookupMap.get(orderId);
+
+        if (order == null) {
+            return false;
+        }
+
+        if (!order.isActive()) {
+            return false;
+        }
+
+        if (order.getStatus().equalsIgnoreCase("Completed")) {
+            System.out.println("Error: Completed order cannot be deleted.");
+            return false;
+        }
+        if (order.getStatus().equalsIgnoreCase("Ready")
+                || order.getStatus().equalsIgnoreCase("Delivery")) {
+
+            refundItemsToInventory(order);
+        }
+
+        order.setIsActive(false);
+
+        rebuildFEFOQueue();
+
+        return true;
+    }
+
     public List<Order> getAllOrdersList() {
-        return allOrdersList;
+        List<Order> activeOrders = new ArrayList<>();
+        for (Order order : allOrdersList) {
+            if (order.isActive()) {
+                activeOrders.add(order);
+            }
+        }
+        return activeOrders;
     }
 
     public Order getOrderById(String id) {
-        return orderLookupMap.get(id);
+        Order order = orderLookupMap.get(id);
+        if (order == null || !order.isActive()) {
+            return null;
+        }
+        return order;
     }
 }
 
