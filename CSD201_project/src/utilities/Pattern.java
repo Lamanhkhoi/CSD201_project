@@ -7,7 +7,6 @@ public interface Pattern {
     
     // Bổ sung cho phân hệ Inventory
     String BATCH_ID_PATTERN = "^BAT\\d{3}$"; // Bắt buộc BAT kèm 3 số (vd: BAT001)
-    String SKU_PATTERN = "^[A-Z0-9-]{3,10}$"; // Chữ in hoa, số và dấu gạch ngang, dài 3-10 ký tự (vd: MILK-123)
     
     
 }
