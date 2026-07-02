@@ -2,23 +2,37 @@ package structures;
 
 import java.util.Comparator;
 
+/*
+ Hàng đợi ưu tiên (Min-Priority Queue) cài đặt theo dạng Node (Danh sách liên kết đơn có sắp xếp).
+ Danh sách luôn được duy trì theo thứ tự tăng dần: phần tử có độ ưu tiên cao nhất
+ (nhỏ nhất) luôn nằm ở đầu danh sách (head), nên dequeueMin chỉ cần gỡ head ra.
+ */
 public class PriorityQueue<E> {
 
-    private E[] heap;
+    // Lớp Node nội bộ: mỗi Node chứa dữ liệu và con trỏ trỏ tới Node kế tiếp
+    private static class Node<E> {
+
+        E data;
+        Node<E> next;
+
+        Node(E data) {
+            this.data = data;
+            this.next = null;
+        }
+    }
+
+    private Node<E> head; // Con trỏ trỏ tới phần tử có độ ưu tiên cao nhất (nhỏ nhất)
     private int size;
-    private int capacity;
     private Comparator<E> comparator;
 
     public PriorityQueue(Comparator<E> comparator) {
-        this.capacity = 16;
-        this.heap = (E[]) new Object[capacity];
+        this.head = null;
         this.size = 0;
         this.comparator = comparator;
     }
 
     public PriorityQueue() {
-        this.capacity = 16;
-        this.heap = (E[]) new Object[capacity];
+        this.head = null;
         this.size = 0;
         this.comparator = null;
     }
@@ -35,39 +49,54 @@ public class PriorityQueue<E> {
         return this.comparator;
     }
 
+    // Xem phần tử có độ ưu tiên cao nhất (đầu danh sách) mà không xóa nó
     public E peek() {
         if (isEmpty()) {
             return null;
         }
-        return heap[0];
+        return head.data;
     }
 
+    /*
+     Thêm phần tử mới vào đúng vị trí đã sắp xếp trong danh sách liên kết.
+     Duyệt từ head cho đến khi gặp Node có độ ưu tiên thấp hơn (lớn hơn) rồi chèn vào trước Node đó.
+     Nếu độ ưu tiên bằng nhau thì chèn vào sau để giữ thứ tự vào trước - ra trước (FIFO).
+     */
     public void enqueue(E element) {
-        if (size == capacity) {
-            resize(); // Tự động nhân đôi dung lượng mảng nếu bị tràn
+        Node<E> newNode = new Node<>(element);
+
+        // Trường hợp 1: Danh sách rỗng hoặc phần tử mới nhỏ hơn head -> chèn vào đầu
+        if (head == null || compareElements(element, head.data) < 0) {
+            newNode.next = head;
+            head = newNode;
+            size++;
+            return;
         }
-        heap[size] = element; // Đặt phần tử mới vào vị trí trống cuối cùng của mảng
-        upHeap(size);         // Thực hiện thuật toán sàng lên (Sift-up/Up-heap)
+
+        // Trường hợp 2: Duyệt tìm vị trí chèn ở giữa hoặc cuối danh sách
+        Node<E> current = head;
+        while (current.next != null && compareElements(current.next.data, element) <= 0) {
+            current = current.next; // Tiếp tục đi tới khi Node kế tiếp vẫn nhỏ hơn hoặc bằng phần tử mới
+        }
+
+        // Chèn newNode vào giữa current và current.next
+        newNode.next = current.next;
+        current.next = newNode;
         size++;
     }
 
     /*
-     Lấy ra và xóa bỏ phần tử có độ ưu tiên cao nhất (gốc Heap index 0). Tự
-     động đưa phần tử cuối lên và sàng xuống để tái lập đặc tính Min-Heap.
+     Lấy ra và xóa bỏ phần tử có độ ưu tiên cao nhất. Vì danh sách luôn được
+     sắp xếp sẵn nên chỉ cần gỡ Node đầu (head) ra là xong.
      */
     public E dequeueMin() {
         if (isEmpty()) {
             return null;
         }
 
-        E minElement = heap[0];      // Lưu vết phần tử nhỏ nhất ở gốc để trả về
-        heap[0] = heap[size - 1];     // Đưa phần tử cuối cùng của mảng lên thay thế ở gốc
-        heap[size - 1] = null;       // Giải phóng ô nhớ cuối
+        E minElement = head.data; // Lưu vết phần tử nhỏ nhất ở đầu danh sách để trả về
+        head = head.next;         // Dời con trỏ head sang Node kế tiếp, Node cũ sẽ bị thu hồi bộ nhớ
         size--;
-
-        if (size > 0) {
-            downHeap(0);             // Thực hiện thuật toán sàng xuống (Sift-down/Down-heap) từ gốc
-        }
         return minElement;
     }
 
@@ -80,67 +109,9 @@ public class PriorityQueue<E> {
         return ((Comparable<? super E>) first).compareTo(second);
     }
 
-    /*
-     Thuật toán sàng lên (Up-Heap / Sift-Up): Di chuyển một nút từ dưới lên
-     trên cho đến khi nó lớn hơn hoặc bằng nút cha của nó.
-     */
-    private void upHeap(int index) {
-        while (index > 0) {
-            int parentIndex = (index - 1) / 2; // Công thức tìm vị trí nút cha trong mảng phẳng
-
-            // Nếu nút hiện tại lớn hơn hoặc bằng nút cha -> Đã đạt cấu trúc Min-Heap, dừng lại
-            if (compareElements(heap[index], heap[parentIndex]) >= 0) {
-                break;
-            }
-
-            swap(index, parentIndex); // Hoán vị với nút cha
-            index = parentIndex;      // Tiếp tục kiểm tra ngược lên từ vị trí nút cha cũ
-        }
-    }
-
-    /*
-     Thuật toán sàng xuống (Down-Heap / Sift-Down): Di chuyển một nút từ gốc
-     xuống dưới cho đến khi nó nhỏ hơn hoặc bằng cả 2 nút con của nó.
-     */
-    private void downHeap(int index) {
-        while (2 * index + 1 < size) { // Vòng lặp chạy khi nút hiện tại vẫn còn ít nhất 1 nút con trái
-            int leftChild = 2 * index + 1;
-            int rightChild = leftChild + 1;
-            int smallestChild = leftChild; // Giả định ban đầu con trái là nút nhỏ nhất
-
-            // Nếu tồn tại con phải và con phải có độ ưu tiên cao hơn (nhỏ hơn) con trái
-            if (rightChild < size && compareElements(heap[rightChild], heap[leftChild]) < 0) {
-                smallestChild = rightChild;
-            }
-
-            // Nếu nút cha hiện tại đã nhỏ hơn hoặc bằng nút con nhỏ nhất -> Đạt cấu trúc, dừng lại
-            if (compareElements(heap[index], heap[smallestChild]) <= 0) {
-                break;
-            }
-
-            swap(index, smallestChild); // Hoán vị cha với nút con nhỏ nhất để duy trì đỉnh tối thiểu
-            index = smallestChild;      // Tiếp tục hạ xuống kiểm tra ở tầng dưới
-        }
-    }
-
-    private void swap(int i, int j) {
-        E temp = heap[i];
-        heap[i] = heap[j];
-        heap[j] = temp;
-    }
-
-    private void resize() {
-        capacity *= 2;
-        E[] newHeap = (E[]) new Object[capacity];
-        System.arraycopy(heap, 0, newHeap, 0, size);
-        this.heap = newHeap;
-    }
-
     // Xóa sạch tất cả các phần tử trong hàng đợi
     public void clear() {
-        for (int i = 0; i < size; i++) {
-            heap[i] = null;
-        }
+        this.head = null; // Ngắt con trỏ head, toàn bộ chuỗi Node sẽ được Garbage Collector dọn dẹp
         this.size = 0;
     }
 
