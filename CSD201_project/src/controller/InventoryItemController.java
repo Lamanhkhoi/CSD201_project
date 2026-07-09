@@ -2,7 +2,7 @@ package controller;
 
 import java.time.LocalDateTime;
 import model.InventoryItem;
-import structures.PriorityQueue;
+import structures.InventoryPriorityQueue;
 import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.List;
@@ -15,12 +15,12 @@ import controller.ProductController;
 public class InventoryItemController {
 
     private HashMap<String, InventoryItem> inventoryMap;
-    private PriorityQueue<InventoryItem> expiryHeap;
+    private InventoryPriorityQueue expiryHeap;
     private List<InventoryItem> inventoryList;
     private final TransactionController transactionController;
 
     // Thay đổi Constructor nhận đúng 4 tham số dữ liệu thô từ Main truyền vào
-    public InventoryItemController(HashMap<String, InventoryItem> inventoryMap, PriorityQueue<InventoryItem> expiryHeap,
+    public InventoryItemController(HashMap<String, InventoryItem> inventoryMap, InventoryPriorityQueue expiryHeap,
             List<InventoryItem> inventoryList, TransactionController transactionController) {
         this.inventoryMap = inventoryMap;
         this.expiryHeap = expiryHeap;
