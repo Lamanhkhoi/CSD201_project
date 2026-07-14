@@ -15,12 +15,10 @@ public class Order {
     private String status;                  
     private double totalAmount;             
     private LinkedList<OrderItem> itemsToPick; 
-    private int retryCount;
     private boolean isActive;
 
     public Order() {
         this.itemsToPick = new LinkedList<>();
-        this.retryCount = 0;
         this.isActive = true;
     }
 
@@ -37,7 +35,6 @@ public class Order {
         this.status = status;
         this.totalAmount = totalAmount;
         this.itemsToPick = itemsToPick;
-        this.retryCount = 0;
         this.isActive = isActive;
     }
 
@@ -121,13 +118,6 @@ public class Order {
         this.itemsToPick = itemsToPick;
     }
 
-    public int getRetryCount() {
-        return retryCount;
-    }
-
-    public void setRetryCount(int retryCount) {
-        this.retryCount = retryCount;
-    }
 
     public boolean isActive() {
         return isActive;
@@ -135,10 +125,5 @@ public class Order {
 
     public void setIsActive(boolean isActive) {
         this.isActive = isActive;
-    }
-
-    // Tăng số lần thử bốc kho lên 1 đơn vị khi xử lý thất bại dở dang.
-    public void incrementRetryCount() {
-        this.retryCount++;
     }
 }
