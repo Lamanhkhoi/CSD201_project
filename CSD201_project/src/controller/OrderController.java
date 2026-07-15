@@ -9,42 +9,90 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import model.Transaction;
+import structures.OrderPriorityQueue;
 
 public class OrderController {
 
     private final List<Order> allOrdersList;
-
-    // Kết nối đến module Kho vật lý của thành viên khác
     private final HashMap<String, InventoryItem> globalInventoryMap;
     private final InventoryPriorityQueue globalExpiryHeap;
+    private final OrderPriorityQueue waitingOrderFEFOQueue;
+    private final TransactionController tranController;
 
     public OrderController(List<Order> allOrdersList,
             HashMap<String, InventoryItem> globalInventoryMap,
-            InventoryPriorityQueue globalExpiryHeap) {
-
+            InventoryPriorityQueue globalExpiryHeap,
+            TransactionController transactionController) {
         this.allOrdersList = allOrdersList;
         this.globalInventoryMap = globalInventoryMap;
         this.globalExpiryHeap = globalExpiryHeap;
+        this.waitingOrderFEFOQueue = new OrderPriorityQueue();
+        this.tranController = transactionController;
     }
 
     public void initializeData(List<Order> loadedOrders) {
-        this.allOrdersList.clear();
+        allOrdersList.clear();
         LocalDateTime now = LocalDateTime.now();
-
         for (Order order : loadedOrders) {
-            if (!order.getStatus().equals("Completed") && !order.getStatus().equals("Delivery")
-                    && order.getLatestDate().isBefore(now)) {
+            if (!order.getStatus().equals("Completed") && !order.getStatus().equals("Delivery") && order.getLatestDate().isBefore(now)) {
                 order.setStatus("Cancel");
                 System.out.println("System: Auto-Cancelled overdue order [" + order.getOrderId() + "] during setup.");
             }
-
-            this.allOrdersList.add(order);
+            allOrdersList.add(order);
         }
     }
 
-    public void registerNewOrder(Order newOrder) {
-        this.allOrdersList.add(newOrder);
+    public boolean registerNewOrder(Order newOrder) {
+        if (!tryAtomicReservation(newOrder)) {
+            return false;
+        }
+        newOrder.setStatus("Ready");
         newOrder.setIsActive(true);
+        allOrdersList.add(newOrder);
+        waitingOrderFEFOQueue.enqueue(newOrder);
+        return true;
+    }
+
+    private boolean tryAtomicReservation(Order order) {
+        LinkedList<OrderItem> requiredItems = order.getItemsToPick();
+
+        for (int i = 0; i < requiredItems.size(); i++) {
+            OrderItem orderItem = requiredItems.get(i);
+            InventoryItem batch = findBatchBySku(orderItem.getSku());
+            if (batch == null || batch.getQuantity() < orderItem.getQuantity()) {
+                System.out.println("-> [THẤT BẠI] Đơn " + order.getOrderId() + " không đủ hàng cho SKU [" + orderItem.getSku() + "]");
+                return false;
+            }
+        }
+
+        for (int i = 0; i < requiredItems.size(); i++) {
+            OrderItem orderItem = requiredItems.get(i);
+            InventoryItem batch = findBatchBySku(orderItem.getSku());
+            batch.setQuantity(batch.getQuantity() - orderItem.getQuantity());
+
+            String txId = "TX-" + batch.getBatchId();
+            Transaction newTx = new Transaction(txId, order.getOrderId(), "EXPORT",
+                    batch.getSku(), batch.getBatchId(), orderItem.getQuantity(), LocalDateTime.now());
+            tranController.addTransaction(newTx);
+
+            if (batch.getQuantity() == 0) {
+                globalInventoryMap.remove(batch.getBatchId());
+            }
+        }
+
+        globalExpiryHeap.clear();
+        globalExpiryHeap.addAll(globalInventoryMap.values());
+        return true;
+    }
+
+    private InventoryItem findBatchBySku(String sku) {
+        for (InventoryItem item : globalInventoryMap.values()) {
+            if (item.getSku().trim().equalsIgnoreCase(sku.trim())) {
+                return item;
+            }
+        }
+        return null;
     }
 
     public boolean updateOrderStatusManual(String orderId, String newStatus) {
@@ -89,46 +137,11 @@ public class OrderController {
         existingOrder.setCustomerName(updatedOrder.getCustomerName());
         existingOrder.setPhone(updatedOrder.getPhone());
         existingOrder.setAddress(updatedOrder.getAddress());
-
         existingOrder.setCreatedDate(updatedOrder.getCreatedDate());
         existingOrder.setExpectedDate(updatedOrder.getExpectedDate());
         existingOrder.setLatestDate(updatedOrder.getLatestDate());
 
         return true;
-    }
-
-    private void refundItemsToInventory(Order order) {
-        LinkedList<OrderItem> itemsToRefund = order.getItemsToPick();
-
-        for (int i = 0; i < itemsToRefund.size(); i++) {
-            OrderItem orderItem = itemsToRefund.get(i);
-            String sku = orderItem.getSku();
-            int refundQty = orderItem.getQuantity();
-            boolean refunded = false;
-            for (model.InventoryItem inventoryItem : globalInventoryMap.values()) {
-                if (inventoryItem.getSku().trim().equalsIgnoreCase(sku.trim())) {
-                    inventoryItem.setQuantity(inventoryItem.getQuantity() + refundQty);
-                    refunded = true;
-                    break;
-                }
-            }
-            if (!refunded) {
-                String refundBatchId = "REF-" + order.getOrderId() + "-" + sku;
-                InventoryItem newRefundBatch = new InventoryItem(
-                        refundBatchId,
-                        sku,
-                        refundQty,
-                        java.time.LocalDate.now(),
-                        java.time.LocalDate.now().plusMonths(6),
-                        "KỆ-HOÀN"
-                );
-                globalInventoryMap.put(refundBatchId, newRefundBatch);
-            }
-        }
-        globalExpiryHeap.clear();
-        globalExpiryHeap.addAll(globalInventoryMap.values());
-
-        System.out.println("System: Stock items for Order [" + order.getOrderId() + "] refunded successfully.");
     }
 
     public boolean deleteOrder(String orderId) {

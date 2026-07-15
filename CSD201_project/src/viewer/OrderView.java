@@ -126,9 +126,16 @@ public class OrderView {
                 LocalDateTime.now(), expected.atStartOfDay(), latest.atStartOfDay(),
                 "Pending", totalAmount, itemsList, true);
 
-        orderController.registerNewOrder(newOrder);
-        System.out.println("Đăng ký đơn hàng thành công!");
+        boolean success = orderController.registerNewOrder(newOrder);
+        if (!success) {
+            System.out.println("Đăng ký đơn hàng thất bại: không đủ hàng trong kho cho 1 hoặc nhiều SKU!");
+            return;
+        }
+
+        System.out.println("Đăng ký đơn hàng thành công! Tổng tiền: " + String.format("%,.0f", totalAmount) + " VNĐ");
         mainController.saveOrders();
+        mainController.saveInventory();
+        mainController.saveTransactions();
     }
 
     private void printOrderTable(List<Order> list) {

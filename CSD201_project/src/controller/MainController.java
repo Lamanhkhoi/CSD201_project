@@ -74,7 +74,7 @@ public class MainController {
         this.productController = new ProductController(this.productList);
         this.transactionController = new TransactionController(this.transactionHistory);
         this.inventoryController = new InventoryItemController(this.inventoryMap, this.expiryHeap, this.inventoryList, this.transactionController);
-        this.orderController = new OrderController(this.allOrdersList, this.inventoryMap, this.expiryHeap);
+        this.orderController = new OrderController(this.allOrdersList, this.inventoryMap, this.expiryHeap, this.transactionController);
     }
 
     private void loadAllSystemData() {
@@ -119,7 +119,6 @@ public class MainController {
         }
     }
 
-    // --- CÁC HÀM GETTER ĐỂ SUBVIEW GỌI CHUYỂN TIẾP XUỐNG SUBCONTROLLER ---
     public ProductController getProductController() {
         return productController;
     }
@@ -136,22 +135,24 @@ public class MainController {
         return transactionController;
     }
 
-    // --- CÁC HÀM SAVE FILE THEO PHƯƠNG ÁN B (GỌI STORAGEHANDLER ĐỂ HỎI NGƯỜI DÙNG) ---
     public boolean saveProducts() {
-        return productStorage.askAndSave(this.productList);
+        System.out.println("Thao tác trên file Product.txt: ");
+        return productStorage.askAndSave(productList);
     }
 
     public boolean saveInventory() {
-        return inventoryStorage.askAndSave(this.inventoryList);
+        System.out.println("Thao tác trên file InventoryItem.txt: ");
+        return inventoryStorage.askAndSave(inventoryList);
     }
 
     public boolean saveOrders() {
-        return orderStorage.askAndSave(this.allOrdersList);
+        System.out.println("Thao tác trên file Order.txt: ");
+        return orderStorage.askAndSave(allOrdersList);
     }
 
     public boolean saveTransactions() {
         try {
-            return tranFileHandler.write(this.transactionHistory);
+            return tranFileHandler.write(transactionHistory);
         } catch (Exception e) {
             return false;
         }
