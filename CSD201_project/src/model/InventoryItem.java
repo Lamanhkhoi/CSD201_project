@@ -14,8 +14,8 @@ public class InventoryItem{
 
     private String slotId;
     private int quantity;
-    private LocalDate receiveDate; // Ngày nhập kho của riêng lô này
-    private LocalDate expiryDate;       // Trạng thái (AVAILABLE, DAMAGED,...)
+    private LocalDate receiveDate;  // Ngày nhập kho của riêng lô này
+    private LocalDate expiryDate;   // Ngày hết hạn của lô hàng    
 
     public InventoryItem() {
     }

@@ -49,14 +49,13 @@ public class SlotPriorityQueue {
     }
  
     /*
-     Thêm lô hàng con mới vào đúng vị trí đã sắp xếp trong danh sách liên kết.
-     Cùng cơ chế với InventoryPriorityQueue.enqueue: duyệt tìm vị trí chèn,
-     giữ nguyên thứ tự FIFO nếu độ ưu tiên bằng nhau.
-     */
-    public void enqueue(InventoryItem lot) {
-        Node newNode = new Node(lot);
+     Thêm lô hàng con mới vào đúng vị trí đã sắp xếp trong danh sách liên kết, 
+     duyệt tìm vị trí chèn, giữ nguyên thứ tự FIFO nếu độ ưu tiên bằng nhau.
+    */
+    public void enqueue(InventoryItem slot) {
+        Node newNode = new Node(slot);
  
-        if (head == null || compareLots(lot, head.data) < 0) {
+        if (head == null || compareLots(slot, head.data) < 0) {
             newNode.next = head;
             head = newNode;
             size++;
@@ -64,7 +63,7 @@ public class SlotPriorityQueue {
         }
  
         Node current = head;
-        while (current.next != null && compareLots(current.next.data, lot) <= 0) {
+        while (current.next != null && compareLots(current.next.data, slot) <= 0) {
             current = current.next;
         }
  
