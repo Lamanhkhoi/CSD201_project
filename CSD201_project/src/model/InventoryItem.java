@@ -10,43 +10,29 @@ import java.time.LocalDate;
  *
  * @author LENOVO
  */
-public class InventoryItem implements Comparable<InventoryItem>{
+public class InventoryItem{
 
-    private String batchId;
-    private String sku;
+    private String lotId;
     private int quantity;
-    private LocalDate receiveDate; // Ngày nhập kho
-    private LocalDate expiryDate;
-    private String location;
-    private String status;         // Trạng thái (AVAILABLE, DAMAGED,...)
+    private LocalDate receiveDate; // Ngày nhập kho của riêng lô này
+    private LocalDate expiryDate;       // Trạng thái (AVAILABLE, DAMAGED,...)
 
     public InventoryItem() {
     }
 
-    public InventoryItem(String batchId, String sku, int quantity, LocalDate receiveDate, LocalDate expiryDate, String location) {
-        this.batchId = batchId;
-        this.sku = sku;
+    public InventoryItem(String lotId, int quantity, LocalDate receiveDate, LocalDate expiryDate) {
+        this.lotId = lotId;
         this.quantity = quantity;
         this.receiveDate = receiveDate;
         this.expiryDate = expiryDate;
-        this.location = location;
-        this.status = "AVAILABLE";
     }
 
-    public String getBatchId() {
-        return batchId;
+    public String getLotId() {
+        return lotId;
     }
 
-    public void setBatchId(String batchId) {
-        this.batchId = batchId;
-    }
-
-    public String getSku() {
-        return sku;
-    }
-
-    public void setSku(String sku) {
-        this.sku = sku;
+    public void setLotId(String lotId) {
+        this.lotId = lotId;
     }
 
     public int getQuantity() {
@@ -72,40 +58,12 @@ public class InventoryItem implements Comparable<InventoryItem>{
     public void setExpiryDate(LocalDate expiryDate) {
         this.expiryDate = expiryDate;
     }
-
-    public String getLocation() {
-        return location;
-    }
-
-    public void setLocation(String location) {
-        this.location = location;
-    }
-
-    public String getStatus() {
-        return status;
-    }
-
-    public void setStatus(String status) {
-        this.status = status;
-    }
-
-    @Override
-    public int compareTo(InventoryItem other) {
-        // Tiêu chí 1: Ngày hết hạn (Ngày nào nhỏ hơn/gần hơn thì đứng trước)
-        int dateCompare = this.expiryDate.compareTo(other.expiryDate);
-
-        if (dateCompare != 0) {
-            return dateCompare;
-        }
-
-        // Tiêu chí 2: Nếu cùng ngày hết hạn, ưu tiên lô nhập kho trước (FIFO)
-        return this.receiveDate.compareTo(other.receiveDate);
-    }
+    
+    
 
     @Override
     public String toString() {
-        return String.format("%s;%s;%d;%s;%s;%s;%s",
-                batchId, sku, quantity, receiveDate, expiryDate, location, status);
+        return String.format("%s;%d;%s;%s",lotId, quantity, receiveDate, expiryDate);
     }
 }
     
