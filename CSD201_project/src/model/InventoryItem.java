@@ -12,7 +12,7 @@ import java.time.LocalDate;
  */
 public class InventoryItem{
 
-    private String lotId;
+    private String slotId;
     private int quantity;
     private LocalDate receiveDate; // Ngày nhập kho của riêng lô này
     private LocalDate expiryDate;       // Trạng thái (AVAILABLE, DAMAGED,...)
@@ -20,19 +20,19 @@ public class InventoryItem{
     public InventoryItem() {
     }
 
-    public InventoryItem(String lotId, int quantity, LocalDate receiveDate, LocalDate expiryDate) {
-        this.lotId = lotId;
+    public InventoryItem(String slotId, int quantity, LocalDate receiveDate, LocalDate expiryDate) {
+        this.slotId = slotId;
         this.quantity = quantity;
         this.receiveDate = receiveDate;
         this.expiryDate = expiryDate;
     }
 
-    public String getLotId() {
-        return lotId;
+    public String getSlotId() {
+        return slotId;
     }
 
-    public void setLotId(String lotId) {
-        this.lotId = lotId;
+    public void setSlotId(String slotId) {
+        this.slotId = slotId;
     }
 
     public int getQuantity() {
@@ -63,7 +63,7 @@ public class InventoryItem{
 
     @Override
     public String toString() {
-        return String.format("%s;%d;%s;%s",lotId, quantity, receiveDate, expiryDate);
+        return String.format("%s;%d;%s;%s",slotId, quantity, receiveDate, expiryDate);
     }
 }
     
