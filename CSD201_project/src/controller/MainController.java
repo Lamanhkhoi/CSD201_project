@@ -3,7 +3,9 @@ package controller;
 import model.*;
 import fileio.*;
 import structures.SinglyLinkedList;
-import structures.PriorityQueue;
+import structures.InventoryPriorityQueue;
+import structures.OrderPriorityQueue;
+import structures.SlotPriorityQueue;
 import utilities.StorageHandler;
 
 import java.util.ArrayList;
@@ -15,9 +17,9 @@ public class MainController {
 
     // 1. Vùng lưu trữ dữ liệu tập trung toàn hệ thống trên RAM
     private SinglyLinkedList<Product> productList;
-    private HashMap<String, InventoryItem> inventoryMap;
-    private PriorityQueue<InventoryItem> expiryHeap;
-    private List<InventoryItem> inventoryList;
+    private HashMap<String, InventoryBatch> inventoryBatchMap;
+    private HashMap<String, String> skuToBatchId;
+    private List<InventoryBatch> loadedInventoryBatches;
     private List<Order> allOrdersList;
     private HashMap<String, Order> orderLookupMap;
     private PriorityQueue<Order> waitingOrderFEFOQueue;
@@ -31,7 +33,7 @@ public class MainController {
 
     // 3. StorageHandlers
     private final StorageHandler<Product, SinglyLinkedList<Product>> productStorage;
-    private final StorageHandler<InventoryItem, List<InventoryItem>> inventoryStorage;
+    private final StorageHandler<InventoryBatch, List<InventoryBatch>> inventoryStorage;
     private final StorageHandler<Order, List<Order>> orderStorage;
     private final StorageHandler<Transaction, SinglyLinkedList<Transaction>> tranStorage;
 
@@ -43,18 +45,12 @@ public class MainController {
 
     public MainController() {
         this.productList = new SinglyLinkedList<>();
-        this.inventoryMap = new HashMap<>();
-        this.inventoryList = new ArrayList<>();
+        this.inventoryBatchMap = new HashMap<>();
+        this.skuToBatchId = new HashMap<>();
         this.allOrdersList = new ArrayList<>();
         this.orderLookupMap = new HashMap<>();
         this.transactionHistory = new SinglyLinkedList<>();
 
-        this.expiryHeap = new PriorityQueue<>(new Comparator<InventoryItem>() {
-            @Override
-            public int compare(InventoryItem o1, InventoryItem o2) {
-                return o1.compareTo(o2);
-            }
-        });
 
         this.waitingOrderFEFOQueue = new PriorityQueue<>(new Comparator<Order>() {
             @Override
@@ -81,7 +77,8 @@ public class MainController {
         // Khởi tạo các SubController bằng cách TRUYỀN THAM CHIẾU DATA VÀO CONSTRUCTOR
         this.productController = new ProductController(this.productList);
         this.transactionController = new TransactionController(this.transactionHistory);
-        this.inventoryController = new InventoryItemController(this.inventoryMap, this.expiryHeap, this.inventoryList, this.transactionController);
+        this.inventoryController = new InventoryItemController(this.inventoryBatchMap, this.skuToBatchId, this.transactionController);
+        this.inventoryController.initializeFromLoadedData(this.loadedInventoryBatches);
         this.orderController = new OrderController(this.allOrdersList, this.inventoryMap, this.expiryHeap, this.transactionController);
     }
 
@@ -94,13 +91,8 @@ public class MainController {
         }
 
         try {
-            this.inventoryList = inventoryFileIO.read();
-            for (InventoryItem item : this.inventoryList) {
-                this.inventoryMap.put(item.getBatchId(), item);
-                if (item.getStatus().equalsIgnoreCase("AVAILABLE")) {
-                    this.expiryHeap.enqueue(item);
-                }
-            }
+            this.loadedInventoryBatches  = inventoryFileIO.read();
+            
             System.out.println("System Core: Tải dữ liệu tồn kho thành công.");
         } catch (Exception e) {
             System.out.println("System Core Warning: Lỗi tải file tồn kho: " + e.getMessage());
@@ -150,7 +142,7 @@ public class MainController {
     }
 
     public boolean saveInventory() {
-        return inventoryStorage.askAndSave(this.inventoryList);
+        return inventoryStorage.askAndSave(this.inventoryController.getAllBatchesForSave());
     }
 
     public boolean saveOrders() {
