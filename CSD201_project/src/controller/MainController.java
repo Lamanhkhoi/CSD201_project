@@ -3,24 +3,27 @@ package controller;
 import model.*;
 import fileio.*;
 import structures.SinglyLinkedList;
-import structures.PriorityQueue;
+import structures.InventoryPriorityQueue;
+import structures.OrderPriorityQueue;
+;
 import utilities.StorageHandler;
 
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Comparator;
+
+
 
 public class MainController {
 
     // 1. Vùng lưu trữ dữ liệu tập trung toàn hệ thống trên RAM
     private SinglyLinkedList<Product> productList;
     private HashMap<String, InventoryItem> inventoryMap;
-    private PriorityQueue<InventoryItem> expiryHeap;
+    private InventoryPriorityQueue expiryHeap;
     private List<InventoryItem> inventoryList;
     private List<Order> allOrdersList;
     private HashMap<String, Order> orderLookupMap;
-    private PriorityQueue<Order> waitingOrderFEFOQueue;
+    private OrderPriorityQueue waitingOrderFEFOQueue;
     private SinglyLinkedList<Transaction> transactionHistory;
 
     // 2. Các File IO Handlers độc lập
@@ -49,19 +52,8 @@ public class MainController {
         this.orderLookupMap = new HashMap<>();
         this.transactionHistory = new SinglyLinkedList<>();
 
-        this.expiryHeap = new PriorityQueue<>(new Comparator<InventoryItem>() {
-            @Override
-            public int compare(InventoryItem o1, InventoryItem o2) {
-                return o1.compareTo(o2);
-            }
-        });
-
-        this.waitingOrderFEFOQueue = new PriorityQueue<>(new Comparator<Order>() {
-            @Override
-            public int compare(Order o1, Order o2) {
-                return o1.getExpectedDate().compareTo(o2.getExpectedDate());
-            }
-        });
+        this.expiryHeap = new InventoryPriorityQueue();
+        this.waitingOrderFEFOQueue = new OrderPriorityQueue();
 
         // Khởi tạo tầng Đọc/Ghi file vật lý
         this.productFileIO = new ProductReadWrite();
@@ -127,7 +119,6 @@ public class MainController {
         }
     }
 
-    // --- CÁC HÀM GETTER ĐỂ SUBVIEW GỌI CHUYỂN TIẾP XUỐNG SUBCONTROLLER ---
     public ProductController getProductController() {
         return productController;
     }
@@ -144,22 +135,24 @@ public class MainController {
         return transactionController;
     }
 
-    // --- CÁC HÀM SAVE FILE THEO PHƯƠNG ÁN B (GỌI STORAGEHANDLER ĐỂ HỎI NGƯỜI DÙNG) ---
     public boolean saveProducts() {
-        return productStorage.askAndSave(this.productList);
+        System.out.println("Thao tác trên file Product.txt: ");
+        return productStorage.askAndSave(productList);
     }
 
     public boolean saveInventory() {
-        return inventoryStorage.askAndSave(this.inventoryList);
+        System.out.println("Thao tác trên file InventoryItem.txt: ");
+        return inventoryStorage.askAndSave(inventoryList);
     }
 
     public boolean saveOrders() {
-        return orderStorage.askAndSave(this.allOrdersList);
+        System.out.println("Thao tác trên file Order.txt: ");
+        return orderStorage.askAndSave(allOrdersList);
     }
 
     public boolean saveTransactions() {
         try {
-            return tranFileHandler.write(this.transactionHistory);
+            return tranFileHandler.write(transactionHistory);
         } catch (Exception e) {
             return false;
         }

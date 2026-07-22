@@ -9,6 +9,7 @@ import java.util.List;
 import structures.LinkedList;
 
 public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
+
     private final String filePath = "data/orders.txt";
 
     @Override
@@ -21,12 +22,14 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
             return list;
         }
 
-        try (BufferedReader br = new BufferedReader(new FileReader(file))) {
+        try ( BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             while ((line = br.readLine()) != null) {
-                if (line.trim().isEmpty()) continue;
+                if (line.trim().isEmpty()) {
+                    continue;
+                }
                 String[] parts = line.split(";");
-                
+
                 String orderId = parts[0];
                 String customerName = parts[1];
                 String phone = parts[2];
@@ -37,6 +40,9 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
                 String status = parts[7];
                 double totalAmount = Double.parseDouble(parts[8]);
                 boolean isActive = Boolean.parseBoolean(parts[9]);
+                if (!isActive) {
+                    continue; 
+                }
 
                 LinkedList<OrderItem> itemsToPick = new LinkedList<>();
                 if (parts.length > 10 && !parts[10].equalsIgnoreCase("NONE")) {
@@ -47,7 +53,7 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
                     }
                 }
 
-                Order order = new Order(orderId, customerName, phone, address, 
+                Order order = new Order(orderId, customerName, phone, address,
                         createdDate, expectedDate, latestDate, status, totalAmount, itemsToPick, isActive);
                 list.add(order);
             }
@@ -57,19 +63,19 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
 
     @Override
     public boolean write(List<Order> list) throws Exception {
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(filePath))) {
+        try ( BufferedWriter bw = new BufferedWriter(new FileWriter(filePath))) {
             for (Order o : list) {
                 StringBuilder sb = new StringBuilder();
                 sb.append(o.getOrderId()).append(";")
-                  .append(o.getCustomerName()).append(";")
-                  .append(o.getPhone()).append(";")
-                  .append(o.getAddress()).append(";")
-                  .append(o.getCreatedDate().toString()).append(";")
-                  .append(o.getExpectedDate().toString()).append(";")
-                  .append(o.getLatestDate().toString()).append(";")
-                  .append(o.getStatus()).append(";")
-                  .append(o.getTotalAmount()).append(";")
-                  .append(o.isActive()).append(";");
+                        .append(o.getCustomerName()).append(";")
+                        .append(o.getPhone()).append(";")
+                        .append(o.getAddress()).append(";")
+                        .append(o.getCreatedDate().toString()).append(";")
+                        .append(o.getExpectedDate().toString()).append(";")
+                        .append(o.getLatestDate().toString()).append(";")
+                        .append(o.getStatus()).append(";")
+                        .append(o.getTotalAmount()).append(";")
+                        .append(o.isActive()).append(";");
 
                 LinkedList<OrderItem> items = o.getItemsToPick();
                 if (items.isEmpty()) {
@@ -78,7 +84,9 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
                     for (int j = 0; j < items.size(); j++) {
                         OrderItem item = items.get(j);
                         sb.append(item.getSku()).append(":").append(item.getQuantity());
-                        if (j < items.size() - 1) sb.append(",");
+                        if (j < items.size() - 1) {
+                            sb.append(",");
+                        }
                     }
                 }
                 bw.write(sb.toString());
@@ -87,6 +95,5 @@ public class OrderReadWrite implements IFileReadWrite<Order, List<Order>> {
             return true;
         }
     }
-    
-    
+
 }
