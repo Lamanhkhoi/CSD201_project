@@ -2,6 +2,7 @@ package viewer;
 
 import controller.MainController;
 import controller.InventoryItemController;
+import model.InventoryBatch;
 import model.InventoryItem;
 import utilities.Inputter;
 import utilities.Pattern;
@@ -21,9 +22,10 @@ public class InventoryView {
 
     public void displaySubMenu() {
         Object[] options = {
-            "Nhập kho lô hàng mới (Receive Stock)",
-            "Điều chuyển vị trí kệ (Relocate Stock)",
-            "Tìm kiếm lô hàng trong kho (Search)",
+            "Nhập kho theo SKU (Receive Stock)",
+            "Dời SKU sang ngăn tủ khác (Move Batch)",
+            "Xóa SKU khỏi kho (Delete SKU)",
+            "Tìm kiếm theo SKU (Search)",
             "Cảnh báo hàng cận date/hết hạn (Expiry Alerts)",
             "Hiển thị & Sắp xếp tồn kho (Display & Sort)",
             "Quay lại Menu chính (Back to Main Menu)"
@@ -38,190 +40,172 @@ public class InventoryView {
                     uiReceiveStock();
                     break;
                 case 2:
-                    uiRelocateStock();
+                    uiMoveBatch();
                     break;
                 case 3:
-                    uiSearchStock();
+                    uiDeleteSku();
                     break;
                 case 4:
-                    uiExpiryAlerts();
+                    uiSearchStock();
                     break;
                 case 5:
-                    uiDisplayAndSort();
+                    uiExpiryAlerts();
                     break;
                 case 6:
+                    uiDisplayAndSort();
+                    break;
+                case 7:
                     return;
                 default:
-                    System.out.println("Lựa chọn không hợp lệ!");
+                    System.out.println("-> [Lỗi] Lựa chọn không hợp lệ!");
             }
         }
     }
 
     // =========================================================
-    // 1. NHẬP KHO
+    // 1. NHẬP KHO THEO SKU (không còn nhập batchId/vị trí kệ tay - hệ thống tự cấp ngăn tủ)
     // =========================================================
     private void uiReceiveStock() {
-        System.out.println("\n--- THÊM LÔ HÀNG MỚI ---");
-        
-        String batchId;
-        while (true) {
-            batchId = Inputter.inputStr("Nhập mã lô hàng (VD: BAT001): ").toUpperCase();
-            if (!batchId.matches(Pattern.BATCH_ID_PATTERN)) {
-                System.out.println("-> [Lỗi] Sai định dạng! Mã lô bắt buộc bắt đầu bằng 'BAT' kèm 3 số.");
-                continue;
-            }
-            break;
-        }
+        System.out.println("\n--- NHẬP KHO ---");
 
         String sku;
         while (true) {
-            sku = Inputter.inputStr("Nhập mã SKU (VD: p123): ").toUpperCase();
-            
-            // 1. Kiểm tra định dạng bằng Regex
+            sku = Inputter.inputStr("Nhập mã SKU (VD: P001): ").toUpperCase();
+
             if (!sku.matches(Pattern.PRODUCT_SKU_PATTERN)) {
-                System.out.println("-> [Lỗi] Sai định dạng! Mã SKU phải dài 3-10 ký tự, gồm chữ in hoa, số và gạch ngang.");
+                System.out.println("-> [Lỗi] Sai định dạng! Mã SKU phải đúng dạng P + 3 số.");
                 continue;
             }
-            
-            // 2. Kiểm tra SKU có tồn tại trong danh mục Product hay chưa (Toàn vẹn tham chiếu)
+
             if (mainController.getProductController().findProductBySku(sku) == null) {
-                 System.out.println("-> [Lỗi] TỪ CHỐI! Sản phẩm '" + sku + "' chưa có trong Danh mục Hệ thống.");
-                 System.out.println("-> Gợi ý: Hãy nhập mã SKU khác, hoặc thoát ra sang Menu Sản Phẩm để tạo mới.");
-                 return;
+                System.out.println("-> [Lỗi] TỪ CHỐI! Sản phẩm '" + sku + "' chưa có trong Danh mục Hệ thống.");
+                System.out.println("-> Gợi ý: Hãy sang Menu Sản Phẩm để tạo mới trước.");
+                return;
             }
-            
-            break; // Nếu pass qua cả 2 bài test thì cho đi tiếp
+
+            break;
         }
 
         int quantity = Inputter.inputInt("Nhập số lượng: ");
-        LocalDate rDate = LocalDate.now(); // Tự động lấy ngày hệ thống làm ngày nhập kho
-        LocalDate eDate = Inputter.inputDateNullable("Nhập ngày hết hạn (dd/MM/yyyy): ");
-        String location = Inputter.inputStr("Nhập vị trí kệ: ");
+        LocalDate receiveDate = LocalDate.now(); // Tự động lấy ngày hệ thống làm ngày nhập kho
+        LocalDate expiryDate = Inputter.inputDate("Nhập ngày hết hạn (dd/MM/yyyy): ");
 
-        InventoryItem item = new InventoryItem(batchId, sku, quantity, rDate, eDate, location);
-        boolean success = inventoryController.receiveNewItem(item);
+        boolean success = inventoryController.receiveStock(sku, quantity, receiveDate, expiryDate);
 
-        if (success) {
-            System.out.println("Thành công: Đã nhập kho lô hàng mới lên RAM.");
-            // Cập nhật xuống file vật lý thông qua MainController
-            if (mainController != null) {
-                mainController.saveInventory(); 
-            }
-        } else {
-            System.out.println("Thất bại: Thao tác nhập kho đã bị hủy!");
+        if (success && mainController != null) {
+            mainController.saveInventory();
         }
     }
 
     // =========================================================
-    // 2. ĐIỀU CHUYỂN VỊ TRÍ
+    // 2. DỜI SKU SANG NGĂN TỦ KHÁC (thay cho "dời vị trí kệ" cũ)
     // =========================================================
-    private void uiRelocateStock() {
-        System.out.println("\n--- ĐIỀU CHUYỂN VỊ TRÍ KỆ HÀNG ---");
-        String batchId = Inputter.inputStr("Nhập mã lô hàng cần dời: ").toUpperCase();
-        
-        if (inventoryController.getBatchById(batchId) == null) {
-            System.out.println("-> [Lỗi] Không tìm thấy mã lô hàng '" + batchId + "' trên hệ thống!");
+    private void uiMoveBatch() {
+        System.out.println("\n--- DỜI SKU SANG NGĂN TỦ KHÁC ---");
+        String sku = Inputter.inputStr("Nhập mã SKU cần dời: ").toUpperCase();
+
+        if (inventoryController.findBatchBySku(sku) == null) {
+            System.out.println("-> [Lỗi] SKU '" + sku + "' hiện không có trong kho.");
             return;
         }
 
-        String newLoc = Inputter.inputStr("Nhập vị trí kệ mới: ");
-        boolean success = inventoryController.updateItemLocation(batchId, newLoc);
-        
+        String targetBatchId = Inputter.inputStr("Nhập mã ngăn tủ đích (VD: BAT005): ").toUpperCase();
+        boolean success = inventoryController.moveSkuToBatch(sku, targetBatchId);
+
         if (success && mainController != null) {
-            mainController.saveInventory(); // Lưu file sau khi dời thành công
+            mainController.saveInventory();
         }
     }
 
     // =========================================================
-    // 3. TÌM KIẾM
+    // 3. XÓA MỀM SKU (chỉ khi tổng số lượng = 0)
+    // =========================================================
+    private void uiDeleteSku() {
+        System.out.println("\n--- XÓA SKU KHỎI KHO ---");
+        String sku = Inputter.inputStr("Nhập mã SKU cần xóa: ").toUpperCase();
+
+        boolean success = inventoryController.deleteBySku(sku);
+
+        if (success && mainController != null) {
+            mainController.saveInventory();
+        }
+    }
+
+    // =========================================================
+    // 4. TÌM KIẾM THEO SKU (batchId <-> sku giờ là 1-1 nên không còn tìm nhiều batch cho 1 SKU)
     // =========================================================
     private void uiSearchStock() {
-        System.out.println("\n--- TÌM KIẾM LÔ HÀNG TRONG KHO ---");
-        System.out.println("1. Tìm chính xác theo Mã Lô Hàng (Batch ID)");
-        System.out.println("2. Tìm tất cả theo Mã Sản Phẩm (SKU)");
-        int searchChoice = Inputter.inputInt("Chọn cách tìm kiếm (1 hoặc 2): ");
+        System.out.println("\n--- TÌM KIẾM THEO SKU ---");
+        String sku = Inputter.inputStr("Nhập mã SKU cần tìm: ").toUpperCase();
+        InventoryBatch batch = inventoryController.findBatchBySku(sku);
 
-        if (searchChoice == 1) {
-            String searchBatch = Inputter.inputStr("Nhập mã lô hàng (VD: BAT001): ").toUpperCase();
-            InventoryItem foundBatch = inventoryController.getBatchById(searchBatch);
-            
-            if (foundBatch != null) {
-                System.out.println("\n-> ĐÃ TÌM THẤY:");
-                System.out.println(foundBatch.toString());
-            } else {
-                System.out.println("-> [Thông báo] Kho không có lô hàng nào khớp mã: " + searchBatch);
-            }
-
-        } else if (searchChoice == 2) {
-            String searchSku = Inputter.inputStr("Nhập mã sản phẩm (SKU): ").toUpperCase();
-            List<InventoryItem> foundList = inventoryController.getBatchesBySku(searchSku);
-            
-            if (foundList.isEmpty()) {
-                System.out.println("-> [Thông báo] Kho không còn lô hàng nào của sản phẩm: " + searchSku);
-            } else {
-                System.out.println("\n-> TÌM THẤY " + foundList.size() + " LÔ HÀNG:");
-                for (InventoryItem item : foundList) {
-                    System.out.println(item.toString());
-                }
-            }
-        } else {
-            System.out.println("-> [Lỗi] Lựa chọn không hợp lệ!");
+        if (batch == null) {
+            System.out.println("-> [Thông báo] Kho không có SKU nào khớp: " + sku);
+            return;
         }
+
+        printBatchDetail(batch);
     }
 
     // =========================================================
-    // 4. CẢNH BÁO CẬN DATE
+    // 5. CẢNH BÁO CẬN DATE
     // =========================================================
     private void uiExpiryAlerts() {
         System.out.println("\n--- CẢNH BÁO HÀNG CẬN DATE / HẾT HẠN ---");
         int daysThreshold = Inputter.inputInt("Nhập số ngày ngưỡng để cảnh báo (Ví dụ: 30): ");
-        
-        List<InventoryItem> alertList = inventoryController.getAlertItems(daysThreshold);
-        
+
+        List<InventoryBatch> alertList = inventoryController.getAlertBatches(daysThreshold);
+
         if (alertList.isEmpty()) {
-            System.out.println("-> [Thông báo] Tuyệt vời! Kho hàng hiện tại an toàn, không có sản phẩm nào sắp hết hạn trong " + daysThreshold + " ngày tới.");
+            System.out.println("-> [Thông báo] Tuyệt vời! Kho hàng hiện tại an toàn, không có SKU nào sắp hết hạn trong "
+                    + daysThreshold + " ngày tới.");
         } else {
-            System.out.println("\n>>> PHÁT HIỆN " + alertList.size() + " LÔ HÀNG CẦN CHÚ Ý <<<");
-            System.out.println("-------------------------------------------------------------------------");
-            for (InventoryItem item : alertList) {
-                System.out.println(item.toString());
+            System.out.println("\n>>> PHÁT HIỆN " + alertList.size() + " NGĂN TỦ CẦN CHÚ Ý <<<");
+            for (InventoryBatch batch : alertList) {
+                printBatchDetail(batch);
             }
-            System.out.println("-------------------------------------------------------------------------");
         }
     }
 
     // =========================================================
-    // 5. HIỂN THỊ VÀ SẮP XẾP
+    // 6. HIỂN THỊ VÀ SẮP XẾP
     // =========================================================
     private void uiDisplayAndSort() {
         System.out.println("\n--- HIỂN THỊ & SẮP XẾP TỒN KHO ---");
-        System.out.println("1. Hiển thị mặc định (Theo thứ tự nhập kho)");
-        System.out.println("2. Sắp xếp theo Số lượng (Ít nhất lên đầu)");
-        System.out.println("3. Sắp xếp theo Ngày hết hạn (Cận date lên đầu - FEFO)");
-        
-        int sortChoice = Inputter.inputInt("Chọn cách hiển thị (1-3): ");
-        List<InventoryItem> displayList;
+        System.out.println("1. Hiển thị mặc định");
+        System.out.println("2. Sắp xếp theo hạn sử dụng gần nhất (FEFO)");
+
+        int sortChoice = Inputter.inputInt("Chọn cách hiển thị (1-2): ");
+        List<InventoryBatch> displayList;
 
         if (sortChoice == 2) {
-            displayList = inventoryController.getInventorySortedByQuantity();
-        } else if (sortChoice == 3) {
-            displayList = inventoryController.getInventorySortedByExpiryDate();
+            displayList = inventoryController.getBatchesSortedByEarliestExpiry();
         } else {
             if (sortChoice != 1) {
                 System.out.println("-> [Lỗi] Lựa chọn không hợp lệ. Hệ thống sẽ in theo mặc định.");
             }
-            displayList = inventoryController.getAllInventoryList();
+            displayList = inventoryController.getAllActiveBatches();
         }
 
         if (displayList.isEmpty()) {
             System.out.println("-> [Thông báo] Kho hàng hiện đang hoàn toàn trống!");
         } else {
-            System.out.println("\n>>> DANH SÁCH TỒN KHO (" + displayList.size() + " LÔ HÀNG) <<<");
-            System.out.println("-------------------------------------------------------------------------");
-            for (InventoryItem item : displayList) {
-                System.out.println(item.toString());
+            System.out.println("\n>>> DANH SÁCH TỒN KHO (" + displayList.size() + " NGĂN TỦ) <<<");
+            for (InventoryBatch batch : displayList) {
+                printBatchDetail(batch);
             }
-            System.out.println("-------------------------------------------------------------------------");
         }
+    }
+
+    // In chi tiết 1 ngăn tủ, gồm toàn bộ lô hàng con bên trong theo thứ tự FEFO
+    private void printBatchDetail(InventoryBatch batch) {
+        System.out.println("-------------------------------------------------------------------------");
+        System.out.println("Ngăn tủ: " + batch.getBatchId() + " | SKU: " + batch.getSku()
+                + " | Tổng số lượng: " + batch.getTotalQuantity() + " | Số lô: " + batch.lotCount());
+        for (InventoryItem lot : batch.getAllLots()) {
+            System.out.println("   - Lô " + lot.getSlotId() + " | SL: " + lot.getQuantity()
+                    + " | Nhập: " + lot.getReceiveDate() + " | HSD: " + lot.getExpiryDate());
+        }
+        System.out.println("-------------------------------------------------------------------------");
     }
 }
