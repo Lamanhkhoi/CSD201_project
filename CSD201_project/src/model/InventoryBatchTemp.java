@@ -10,13 +10,13 @@ import structures.SlotPriorityQueue;
  *
  * @author Admin
  */
-public class InventoryBatch {
+public class InventoryBatchTemp {
     private String batchId;
     private String sku;
     private SlotPriorityQueue slots;
     private int slotSequence;
 
-    public InventoryBatch(String batchId, String sku) {
+    public InventoryBatchTemp(String batchId, String sku) {
         this.batchId = batchId;
         this.sku = sku;
         this.slots = new SlotPriorityQueue();
