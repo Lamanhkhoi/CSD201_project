@@ -1,6 +1,6 @@
 package controller;
 
-import model.Inventorybatch;
+import model.InventoryBatch;
 import model.InventoryItem;
 import model.Transaction;
 import java.time.LocalDate;
@@ -14,7 +14,7 @@ import java.util.List;
 
 /*
  Controller quản lý tồn kho theo thiết kế "ngăn tủ" (batchId <-> sku là 1-1):
- - batchMap: tra cứu O(1) theo batchId -> Inventorybatch. Một batchId tồn tại
+ - batchMap: tra cứu O(1) theo batchId -> InventoryBatch. Một batchId tồn tại
    trong map nghĩa là nó đang active - KHÔNG còn khái niệm xóa mềm/free-list,
    xóa là gỡ hẳn khỏi map (xóa cứng).
  - skuToBatchId: reverse-index O(1) để biết 1 SKU đang nằm ở batchId nào.
@@ -23,12 +23,12 @@ import java.util.List;
  */
 public class InventoryItemController {
 
-    private final HashMap<String, Inventorybatch> batchMap;
+    private final HashMap<String, InventoryBatch> batchMap;
     private final HashMap<String, String> skuToBatchId;
     private int batchSequence;
     private final TransactionController transactionController;
 
-    public InventoryItemController(HashMap<String, Inventorybatch> batchMap, HashMap<String, String> skuToBatchId,
+    public InventoryItemController(HashMap<String, InventoryBatch> batchMap, HashMap<String, String> skuToBatchId,
             TransactionController transactionController) {
         this.batchMap = batchMap;
         this.skuToBatchId = skuToBatchId;
@@ -37,8 +37,8 @@ public class InventoryItemController {
     }
 
     // Gọi 1 lần sau khi đọc xong dữ liệu từ file: dựng lại skuToBatchId và khôi phục batchSequence
-    public void initializeFromLoadedData(List<Inventorybatch> loadedBatches) {
-        for (Inventorybatch batch : loadedBatches) {
+    public void initializeFromLoadedData(List<InventoryBatch> loadedBatches) {
+        for (InventoryBatch batch : loadedBatches) {
             batchMap.put(batch.getBatchId(), batch);
             skuToBatchId.put(batch.getSku(), batch.getBatchId());
             updateBatchSequenceFromId(batch.getBatchId());
@@ -71,14 +71,14 @@ public class InventoryItemController {
     // ==============================================================
     public boolean receiveStock(String sku, int quantity, LocalDate receiveDate, LocalDate expiryDate) {
         String batchId = skuToBatchId.get(sku);
-        Inventorybatch batch;
+        InventoryBatch batch;
         boolean isNewBatch = false;
 
         if (batchId != null) {
             batch = batchMap.get(batchId);
         } else {
             batchId = generateNewBatchId();
-            batch = new Inventorybatch(batchId, sku);
+            batch = new InventoryBatch(batchId, sku);
             batchMap.put(batchId, batch);
             skuToBatchId.put(sku, batchId);
             isNewBatch = true;
@@ -118,8 +118,8 @@ public class InventoryItemController {
             return false;
         }
 
-        Inventorybatch oldBatch = batchMap.get(oldBatchId);
-        Inventorybatch targetBatch = new Inventorybatch(targetBatchId, sku);
+        InventoryBatch oldBatch = batchMap.get(oldBatchId);
+        InventoryBatch targetBatch = new InventoryBatch(targetBatchId, sku);
         batchMap.put(targetBatchId, targetBatch);
 
         // Chuyển toàn bộ lô hàng con sang ngăn tủ mới - GIỮ NGUYÊN slotId cũ để không mất truy vết lịch sử
@@ -146,7 +146,7 @@ public class InventoryItemController {
             return false;
         }
 
-        Inventorybatch batch = batchMap.get(batchId);
+        InventoryBatch batch = batchMap.get(batchId);
         if (batch.getTotalQuantity() != 0) {
             System.out.println("-> [Lỗi] Không thể xóa - ngăn tủ '" + batchId + "' vẫn còn "
                     + batch.getTotalQuantity() + " sản phẩm.");
@@ -163,7 +163,7 @@ public class InventoryItemController {
     // ==============================================================
     // 4. CÁC HÀM TRA CỨU / HIỂN THỊ
     // ==============================================================
-    public Inventorybatch findBatchBySku(String sku) {
+    public InventoryBatch findBatchBySku(String sku) {
         String batchId = skuToBatchId.get(sku);
         if (batchId == null) {
             return null;
@@ -171,14 +171,14 @@ public class InventoryItemController {
         return batchMap.get(batchId);
     }
 
-    public Inventorybatch findBatchById(String batchId) {
+    public InventoryBatch findBatchById(String batchId) {
         return batchMap.get(batchId);
     }
 
     // Toàn bộ ngăn tủ còn hàng (bỏ qua ngăn tủ hết sạch nhưng chưa bị xóa)
-    public List<Inventorybatch> getAllActiveBatches() {
-        List<Inventorybatch> result = new ArrayList<>();
-        for (Inventorybatch batch : batchMap.values()) {
+    public List<InventoryBatch> getAllActiveBatches() {
+        List<InventoryBatch> result = new ArrayList<>();
+        for (InventoryBatch batch : batchMap.values()) {
             if (!batch.isEmpty()) {
                 result.add(batch);
             }
@@ -187,11 +187,11 @@ public class InventoryItemController {
     }
 
     // Sắp theo hạn sử dụng GẦN NHẤT hiện có trong từng ngăn tủ (lô đầu hàng đợi FEFO của batch đó)
-    public List<Inventorybatch> getBatchesSortedByEarliestExpiry() {
-        List<Inventorybatch> list = getAllActiveBatches();
-        Collections.sort(list, new Comparator<Inventorybatch>() {
+    public List<InventoryBatch> getBatchesSortedByEarliestExpiry() {
+        List<InventoryBatch> list = getAllActiveBatches();
+        Collections.sort(list, new Comparator<InventoryBatch>() {
             @Override
-            public int compare(Inventorybatch a, Inventorybatch b) {
+            public int compare(InventoryBatch a, InventoryBatch b) {
                 return a.peekEarliestLot().getExpiryDate().compareTo(b.peekEarliestLot().getExpiryDate());
             }
         });
@@ -199,11 +199,11 @@ public class InventoryItemController {
     }
 
     // Cảnh báo cận date: xét lô sắp hết hạn nhất trong mỗi ngăn tủ
-    public List<Inventorybatch> getAlertBatches(int daysThreshold) {
-        List<Inventorybatch> result = new ArrayList<>();
+    public List<InventoryBatch> getAlertBatches(int daysThreshold) {
+        List<InventoryBatch> result = new ArrayList<>();
         LocalDate today = LocalDate.now();
 
-        for (Inventorybatch batch : getAllActiveBatches()) {
+        for (InventoryBatch batch : getAllActiveBatches()) {
             InventoryItem earliestLot = batch.peekEarliestLot();
             if (earliestLot != null) {
                 long daysUntilExpiry = ChronoUnit.DAYS.between(today, earliestLot.getExpiryDate());
@@ -216,7 +216,7 @@ public class InventoryItemController {
     }
 
     // Dùng cho MainController khi cần lưu toàn bộ batch xuống file
-    public List<Inventorybatch> getAllBatchesForSave() {
+    public List<InventoryBatch> getAllBatchesForSave() {
         return new ArrayList<>(batchMap.values());
     }
 
@@ -227,13 +227,13 @@ public class InventoryItemController {
     
     // Kiểm tra sl hàng
     public boolean hasEnoughStock(String sku, int quantity) {
-        Inventorybatch batch = findBatchBySku(sku);
+        InventoryBatch batch = findBatchBySku(sku);
         return batch != null && batch.getTotalQuantity() >= quantity;
     }
 
     // Trừ kho theo FEFO, hết lot thì xóa lot
     public boolean deductStock(String sku, int quantity, String orderId) {
-        Inventorybatch batch = findBatchBySku(sku);
+        InventoryBatch batch = findBatchBySku(sku);
         if (batch == null || batch.getTotalQuantity() < quantity) {
             return false;
         }

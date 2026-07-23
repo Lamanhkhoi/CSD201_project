@@ -12,9 +12,9 @@ public class MainController {
 
     // 1. Vùng lưu trữ dữ liệu tập trung toàn hệ thống trên RAM
     private SinglyLinkedList<Product> productList;
-    private HashMap<String, Inventorybatch> inventoryBatchMap;
+    private HashMap<String, InventoryBatch> inventoryBatchMap;
     private HashMap<String, String> skuToBatchId;
-    private List<Inventorybatch> loadedInventoryBatches;
+    private List<InventoryBatch> loadedInventoryBatches;
     private List<Order> allOrdersList;
     private SinglyLinkedList<Transaction> transactionHistory;
 
@@ -26,7 +26,7 @@ public class MainController {
 
     // 3. StorageHandlers
     private final StorageHandler<Product, SinglyLinkedList<Product>> productStorage;
-    private final StorageHandler<Inventorybatch, List<Inventorybatch>> inventoryStorage;
+    private final StorageHandler<InventoryBatch, List<InventoryBatch>> inventoryStorage;
     private final StorageHandler<Order, List<Order>> orderStorage;
     private final StorageHandler<Transaction, SinglyLinkedList<Transaction>> tranStorage;
 

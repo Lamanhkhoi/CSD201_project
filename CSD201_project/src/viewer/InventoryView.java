@@ -2,7 +2,7 @@ package viewer;
 
 import controller.MainController;
 import controller.InventoryItemController;
-import model.Inventorybatch;
+import model.InventoryBatch;
 import model.InventoryItem;
 import utilities.Inputter;
 import utilities.Pattern;
@@ -137,7 +137,7 @@ public class InventoryView {
     private void uiSearchStock() {
         System.out.println("\n--- TÌM KIẾM THEO SKU ---");
         String sku = Inputter.inputStr("Nhập mã SKU cần tìm: ").toUpperCase();
-        Inventorybatch batch = inventoryController.findBatchBySku(sku);
+        InventoryBatch batch = inventoryController.findBatchBySku(sku);
 
         if (batch == null) {
             System.out.println("-> [Thông báo] Kho không có SKU nào khớp: " + sku);
@@ -154,14 +154,14 @@ public class InventoryView {
         System.out.println("\n--- CẢNH BÁO HÀNG CẬN DATE / HẾT HẠN ---");
         int daysThreshold = Inputter.inputInt("Nhập số ngày ngưỡng để cảnh báo (Ví dụ: 30): ");
 
-        List<Inventorybatch> alertList = inventoryController.getAlertBatches(daysThreshold);
+        List<InventoryBatch> alertList = inventoryController.getAlertBatches(daysThreshold);
 
         if (alertList.isEmpty()) {
             System.out.println("-> [Thông báo] Tuyệt vời! Kho hàng hiện tại an toàn, không có SKU nào sắp hết hạn trong "
                     + daysThreshold + " ngày tới.");
         } else {
             System.out.println("\n>>> PHÁT HIỆN " + alertList.size() + " NGĂN TỦ CẦN CHÚ Ý <<<");
-            for (Inventorybatch batch : alertList) {
+            for (InventoryBatch batch : alertList) {
                 printBatchDetail(batch);
             }
         }
@@ -176,7 +176,7 @@ public class InventoryView {
         System.out.println("2. Sắp xếp theo hạn sử dụng gần nhất (FEFO)");
 
         int sortChoice = Inputter.inputInt("Chọn cách hiển thị (1-2): ");
-        List<Inventorybatch> displayList;
+        List<InventoryBatch> displayList;
 
         if (sortChoice == 2) {
             displayList = inventoryController.getBatchesSortedByEarliestExpiry();
@@ -191,14 +191,14 @@ public class InventoryView {
             System.out.println("-> [Thông báo] Kho hàng hiện đang hoàn toàn trống!");
         } else {
             System.out.println("\n>>> DANH SÁCH TỒN KHO (" + displayList.size() + " NGĂN TỦ) <<<");
-            for (Inventorybatch batch : displayList) {
+            for (InventoryBatch batch : displayList) {
                 printBatchDetail(batch);
             }
         }
     }
 
     // In chi tiết 1 ngăn tủ, gồm toàn bộ lô hàng con bên trong theo thứ tự FEFO
-    private void printBatchDetail(Inventorybatch batch) {
+    private void printBatchDetail(InventoryBatch batch) {
         System.out.println("-------------------------------------------------------------------------");
         System.out.println("Ngăn tủ: " + batch.getBatchId() + " | SKU: " + batch.getSku()
                 + " | Tổng số lượng: " + batch.getTotalQuantity() + " | Số lô: " + batch.lotCount());
