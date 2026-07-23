@@ -52,14 +52,14 @@ public class InventoryBatch {
     */
     public InventoryItem addLot(int quantity, LocalDate receiveDate, LocalDate expiryDate) {
         slotSequence++;
-        String lotId = String.format("%s-LOT%02d", batchId, slotSequence);
-        InventoryItem newLot = new InventoryItem(lotId, quantity, receiveDate, expiryDate);
+        String slotId = String.format("%s-SLOT%03d", batchId, slotSequence);
+        InventoryItem newLot = new InventoryItem(slotId, quantity, receiveDate, expiryDate);
         slots.enqueue(newLot);
         return newLot;
     }
 
     /*
-    Dùng khi đọc lại dữ liệu từ file: thêm 1 lô đã có sẵn lotId (không sinh slotId mới), tránh trường hợp đọc file lên lại tạo slotId khác với lúc ghi.
+    Dùng khi đọc lại dữ liệu từ file: thêm 1 lô đã có sẵn slotId (không sinh slotId mới), tránh trường hợp đọc file lên lại tạo slotId khác với lúc ghi.
      */
     public void addExistingLot(InventoryItem slot) {
         slots.enqueue(slot);
@@ -75,7 +75,7 @@ public class InventoryBatch {
         return slots.dequeueMin();
     }
 
-    // Gỡ đúng 1 lô hàng con theo lotId (dùng khi lô về 0, hoặc bị xóa)
+    // Gỡ đúng 1 lô hàng con theo slotId (dùng khi lô về 0, hoặc bị xóa)
     public boolean removeLotById(String lotId) {
         return slots.removeById(lotId);
     }
