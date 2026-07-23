@@ -27,6 +27,7 @@ public class OrderView {
             "Đặt đơn hàng mới",
             "Hiển thị tất cả đơn hàng",
             "Cập nhật thông tin Đơn hàng",
+            "Cập nhật trạng thái Đơn hàng",
             "Xóa đơn hàng",
             "Quay lại Menu chính"
         };
@@ -46,9 +47,12 @@ public class OrderView {
                     uiUpdateOrder();
                     break;
                 case 4:
-                    uiDeleteOrder();
+                    uiCompleteNextOrder();
                     break;
                 case 5:
+                    uiDeleteOrder();
+                    break;
+                case 6:
                     return;
                 default:
                     System.out.println("Lựa chọn không hợp lệ!");
@@ -87,9 +91,15 @@ public class OrderView {
         String address = Inputter.inputStr("Nhập địa chỉ giao hàng: ");
 
         LocalDate expected;
-        LocalDate latest;
         while (true) {
             expected = Inputter.inputDate("Nhập ngày giao hàng dự kiến (dd/MM/yyyy): ");
+            if (expected.isAfter(LocalDate.now())) {
+                break;
+            }
+            System.out.println("Lỗi: Ngày giao dự kiến phải > ngày hôm nay. Nhập lại.");
+        }
+        LocalDate latest;
+        while (true) {
             latest = Inputter.inputDate("Nhập ngày giao hẹn trễ nhất (dd/MM/yyyy): ");
             if (!latest.isBefore(expected)) {
                 break;
@@ -98,21 +108,25 @@ public class OrderView {
         }
 
         LinkedList<OrderItem> itemsList = new LinkedList<>();
-        double totalAmount = 0;
-        System.out.println("-> Bắt đầu nhập danh sách mặt hàng SKU cần mua:");
+        double totalAmount = 0.0;
+        System.out.println("Bắt đầu nhập danh sách mặt hàng SKU cần mua:");
         while (true) {
             String sku;
             Product product;
             while (true) {
-                sku = Inputter.inputStr("   Nhập mã hàng (SKU): ").toUpperCase();
+                sku = Inputter.inputStr("Nhập mã SKU sản phẩm: ").trim();
+                if (!sku.matches(utilities.Pattern.PRODUCT_SKU_PATTERN)) {
+                    System.out.println("Thông báo: Mã SKU sai định dạng! Định dạng chuẩn phải là Pxxx (VD: P001, P123).");
+                    continue;
+                }
                 product = mainController.getProductController().findProductBySku(sku);
                 if (product == null) {
-                    System.out.println("   Mã SKU không tồn tại! Nhập lại.");
+                    System.out.println("Mã SKU không tồn tại! Nhập lại.");
                 } else {
                     break;
                 }
             }
-            int qty = Inputter.inputInt("   Nhập số lượng mua: ");
+            int qty = Inputter.inputInt("Nhập số lượng mua: ");
             itemsList.addLast(new OrderItem(sku, qty));
             totalAmount += product.getPrice() * qty;
 
@@ -128,7 +142,7 @@ public class OrderView {
 
         boolean success = orderController.registerNewOrder(newOrder);
         if (!success) {
-            System.out.println("Đăng ký đơn hàng thất bại: không đủ hàng trong kho cho 1 hoặc nhiều SKU!");
+            System.out.println("Đăng ký đơn hàng thất bại: không đủ hàng trong kho!");
             return;
         }
 
@@ -136,6 +150,17 @@ public class OrderView {
         mainController.saveOrders();
         mainController.saveInventory();
         mainController.saveTransactions();
+    }
+
+    private void uiCompleteNextOrder() {
+        System.out.println("\n========== CẬP NHẬT TRẠNG THÁI (FEFO) ==========");
+        String orderId = orderController.completeNextOrder();
+        if (orderId == null) {
+            System.out.println("Hiện không có đơn hàng nào ở trạng thái Ready để cập nhật.");
+            return;
+        }
+        System.out.println("Đơn hàng [" + orderId + "] đã chuyển sang trạng thái: Completed");
+        mainController.saveOrders();
     }
 
     private void printOrderTable(List<Order> list) {
@@ -150,7 +175,7 @@ public class OrderView {
         for (Order o : list) {
             System.out.printf("%-8s | %-16s | %-10s | %-10s | %-10s | %-10s | %,12.0f\n",
                     o.getOrderId(),
-                    o.getCustomerName().length() > 16 ? o.getCustomerName().substring(0, 13) + "..." : o.getCustomerName(),
+                    o.getCustomerName(),
                     o.getCreatedDate().toLocalDate().toString(),
                     o.getExpectedDate().toLocalDate().toString(),
                     o.getLatestDate().toLocalDate().toString(),
@@ -167,6 +192,10 @@ public class OrderView {
         Order oldOrder = orderController.getOrderById(id);
         if (oldOrder == null) {
             System.out.println("Không tìm thấy đơn hàng.");
+            return;
+        }
+        if (!oldOrder.getStatus().equals("Ready")) {
+            System.out.println("Chỉ có thể cập nhật thông tin khi đơn đang ở trạng thái Ready. Đơn này đang: " + oldOrder.getStatus());
             return;
         }
         System.out.println("\n(Để trống nếu muốn giữ nguyên giá trị cũ)");
@@ -195,25 +224,33 @@ public class OrderView {
 
         LocalDate createdDate = oldOrder.getCreatedDate().toLocalDate();
 
-        LocalDate expectedDate = Inputter.inputDateNullable("Ngày giao dự kiến [" + oldOrder.getExpectedDate().toLocalDate() + "] (dd/MM/yyyy): ");
-        if (expectedDate == null) {
-            expectedDate = oldOrder.getExpectedDate().toLocalDate();
+        LocalDate expectedDate;
+        while (true) {
+            expectedDate = Inputter.inputDateNullable("Ngày giao dự kiến [" + oldOrder.getExpectedDate().toLocalDate() + "] (dd/MM/yyyy): ");
+            if (expectedDate == null) {
+                expectedDate = oldOrder.getExpectedDate().toLocalDate();
+                break;
+            } else {
+                if (expectedDate.isAfter(LocalDate.now())) {
+                    break;
+                }
+                System.out.println("Lỗi: Ngày giao dự kiến phải > ngày hôm nay. Nhập lại.");
+            }
         }
+        
+        LocalDate latestDate;
+        while (true) {
+            latestDate = Inputter.inputDateNullable("Ngày giao trễ nhất [" + oldOrder.getLatestDate().toLocalDate() + "] (dd/MM/yyyy): ");
+            if (latestDate == null) {
+                latestDate = oldOrder.getLatestDate().toLocalDate();
+                break;
+            } else {
+                if (!latestDate.isBefore(expectedDate)) {
+                    break;
+                }
+                System.out.println("Lỗi: Ngày hẹn trễ nhất phải >= ngày giao dự kiến. Nhập lại.");
+            }
 
-        LocalDate latestDate = Inputter.inputDateNullable("Ngày giao trễ nhất [" + oldOrder.getLatestDate().toLocalDate() + "] (dd/MM/yyyy): ");
-
-        if (latestDate == null) {
-            latestDate = oldOrder.getLatestDate().toLocalDate();
-        }
-
-        if (expectedDate.isBefore(createdDate)) {
-            System.out.println("Ngày giao dự kiến phải sau hoặc bằng ngày tạo.");
-            return;
-        }
-
-        if (latestDate.isBefore(expectedDate)) {
-            System.out.println("Ngày giao trễ nhất phải sau hoặc bằng ngày giao dự kiến.");
-            return;
         }
 
         updatedOrder.setCreatedDate(createdDate.atStartOfDay());
@@ -227,6 +264,8 @@ public class OrderView {
         } else {
             System.out.println("Cập nhật đơn hàng thất bại.");
         }
+        
+        mainController.saveOrders();
     }
 
     private void uiDeleteOrder() {
@@ -250,6 +289,7 @@ public class OrderView {
         } else {
             System.out.println("Xóa thất bại.");
         }
-
+        mainController.saveOrders();
     }
+
 }

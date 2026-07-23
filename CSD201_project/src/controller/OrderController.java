@@ -30,7 +30,7 @@ public class OrderController {
         newOrder.setStatus("Ready");
         newOrder.setIsActive(true);
         allOrdersList.add(newOrder);
-        waitingOrderFEFOQueue.enqueue(newOrder);
+        rebuildWaitingQueue();
         return true;
     }
 
@@ -56,25 +56,6 @@ public class OrderController {
         return true;
     }
 
-    public boolean updateOrderStatusManual(String orderId, String newStatus) {
-        Order order = findOrderInList(orderId);
-        if (order == null) {
-            return false;
-        }
-
-        if (order.getLatestDate().isBefore(LocalDateTime.now())) {
-            System.out.println("Error: Đơn hàng đã quá hạn trễ nhất. Khóa trạng thái!");
-            return false;
-        }
-        if (order.getStatus().equals("Completed")) {
-            System.out.println("Error: Đơn hàng đã ở trạng thái Completed. Không thể chỉnh sửa!");
-            return false;
-        }
-
-        order.setStatus(newStatus);
-        return true;
-    }
-
     public boolean updateOrder(Order updatedOrder) {
         if (updatedOrder == null) {
             return false;
@@ -85,23 +66,14 @@ public class OrderController {
         if (existingOrder == null) {
             return false;
         }
-
-        if (existingOrder.getStatus().equalsIgnoreCase("Completed")) {
-            System.out.println("Error: Completed order cannot be updated.");
-            return false;
-        }
-
-        if (existingOrder.getLatestDate().isBefore(LocalDateTime.now())) {
-            System.out.println("Error: Order has expired.");
-            return false;
-        }
+        
         existingOrder.setCustomerName(updatedOrder.getCustomerName());
         existingOrder.setPhone(updatedOrder.getPhone());
         existingOrder.setAddress(updatedOrder.getAddress());
         existingOrder.setCreatedDate(updatedOrder.getCreatedDate());
         existingOrder.setExpectedDate(updatedOrder.getExpectedDate());
         existingOrder.setLatestDate(updatedOrder.getLatestDate());
-
+        rebuildWaitingQueue();
         return true;
     }
 
@@ -111,10 +83,11 @@ public class OrderController {
             return false;
         }
         if (order.getStatus().equalsIgnoreCase("Completed")) {
-            System.out.println("Error: Completed order cannot be deleted.");
+            System.out.println("Lỗi: Đơn Completed không thể xóa.");
             return false;
         }
         order.setIsActive(false);
+        rebuildWaitingQueue();
         return true;
     }
 
@@ -140,5 +113,23 @@ public class OrderController {
             }
         }
         return null;
+    }
+
+    public String completeNextOrder() {
+        if (waitingOrderFEFOQueue.isEmpty()) {
+            return null;
+        }
+        Order next = waitingOrderFEFOQueue.dequeueMin();
+        next.setStatus("Completed");
+        return next.getOrderId();
+    }
+
+    private void rebuildWaitingQueue() {
+        waitingOrderFEFOQueue.clear();
+        for (Order o : allOrdersList) {
+            if (o.isActive() && o.getStatus().equals("Ready")) {
+                waitingOrderFEFOQueue.enqueue(o);
+            }
+        }
     }
 }
