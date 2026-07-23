@@ -12,7 +12,7 @@ public class Order {
     private LocalDateTime createdDate;      
     private LocalDateTime expectedDate;    
     private LocalDateTime latestDate;      
-    private String status;                  
+    private String status;                  // Ready -> Completed
     private double totalAmount;             
     private LinkedList<OrderItem> itemsToPick; 
     private boolean isActive;
