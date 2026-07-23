@@ -1,6 +1,6 @@
 package fileio;
 
-import model.InventoryBatchTemp;
+import model.InventoryBatch;
 import model.InventoryItem;
 import java.io.*;
 import java.time.LocalDate;
@@ -15,14 +15,14 @@ import java.util.List;
  qua đơn hàng nhưng người dùng CHƯA chủ động xóa SKU) vẫn cần 1 dòng "shell"
  để giữ lại batchId/sku - lúc đó 4 cột còn lại ghi bằng dấu '-'.
  */
-public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatchTemp, List<InventoryBatchTemp>> {
+public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatch, List<InventoryBatch>> {
 
     private static final String FILE_PATH = "data/inventory.txt";
     private static final String EMPTY_MARKER = "-";
 
     @Override
-    public List<InventoryBatchTemp> read() throws Exception {
-        List<InventoryBatchTemp> resultList = new ArrayList<>();
+    public List<InventoryBatch> read() throws Exception {
+        List<InventoryBatch> resultList = new ArrayList<>();
         File file = new File(FILE_PATH);
 
         if (!file.exists()) {
@@ -34,7 +34,7 @@ public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatchTemp
         }
 
         // Dùng LinkedHashMap để vừa gom nhóm theo batchId, vừa giữ đúng thứ tự xuất hiện trong file
-        LinkedHashMap<String, InventoryBatchTemp> batchMap = new LinkedHashMap<>();
+        LinkedHashMap<String, InventoryBatch> batchMap = new LinkedHashMap<>();
 
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
@@ -53,9 +53,9 @@ public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatchTemp
                 String sku = parts[1];
                 String slotId = parts[2];
 
-                InventoryBatchTemp batch = batchMap.get(batchId);
+                InventoryBatch batch = batchMap.get(batchId);
                 if (batch == null) {
-                    batch = new InventoryBatchTemp(batchId, sku);
+                    batch = new InventoryBatch(batchId, sku);
                     batchMap.put(batchId, batch);
                 }
 
@@ -84,7 +84,7 @@ public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatchTemp
      của batch nếu số này lớn hơn giá trị đang lưu - đảm bảo sau khi đọc file
      xong, slotSequence luôn bằng đúng số thứ tự lớn nhất đã từng được dùng.
      */
-    private void restoreSlotSequence(InventoryBatchTemp batch, String slotId) {
+    private void restoreSlotSequence(InventoryBatch batch, String slotId) {
         try {
             int dashLotIndex = slotId.lastIndexOf("-LOT");
             if (dashLotIndex == -1) {
@@ -100,9 +100,9 @@ public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatchTemp
     }
 
     @Override
-    public boolean write(List<InventoryBatchTemp> batchesToSave) {
+    public boolean write(List<InventoryBatch> batchesToSave) {
         try (PrintWriter pw = new PrintWriter(new FileWriter(FILE_PATH))) {
-            for (InventoryBatchTemp batch : batchesToSave) {
+            for (InventoryBatch batch : batchesToSave) {
                 List<InventoryItem> lots = batch.getAllLots();
 
                 if (lots.isEmpty()) {
