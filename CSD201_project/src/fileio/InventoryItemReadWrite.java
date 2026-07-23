@@ -86,17 +86,19 @@ public class InventoryItemReadWrite implements IFileReadWrite<InventoryBatch, Li
      */
     private void restoreSlotSequence(InventoryBatch batch, String slotId) {
         try {
-            int dashLotIndex = slotId.lastIndexOf("-LOT");
-            if (dashLotIndex == -1) {
-                return;
-            }
-            int sequenceNumber = Integer.parseInt(slotId.substring(dashLotIndex + 4));
-            if (sequenceNumber > batch.getSlotSequence()) {
-                batch.setSlotSequence(sequenceNumber);
-            }
-        } catch (NumberFormatException e) {
-            // slotId không đúng định dạng tự sinh (VD: dữ liệu nhập tay) -> bỏ qua, không chặn việc đọc file
+        int i = slotId.length();
+        while (i > 0 && Character.isDigit(slotId.charAt(i - 1))) {
+            i--; // Lùi dần từ cuối chuỗi, dừng khi gặp ký tự không phải số
         }
+        if (i == slotId.length()) {
+            return; // Không có chữ số nào ở cuối slotId
+        }
+        int sequenceNumber = Integer.parseInt(slotId.substring(i));
+        if (sequenceNumber > batch.getSlotSequence()) {
+            batch.setSlotSequence(sequenceNumber);
+        }
+    } catch (NumberFormatException e) {
+    }
     }
 
     @Override
