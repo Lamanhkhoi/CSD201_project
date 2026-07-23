@@ -1,5 +1,7 @@
 package controller;
 
+import fileio.IFileReadWrite;
+import fileio.TransactionReadWrite;
 import model.Transaction;
 import structures.SinglyLinkedList;
 
@@ -18,6 +20,9 @@ public class TransactionController {
     public void addTransaction(Transaction tx) {
         if (tx != null) {
             transactionHistory.addLast(tx);
+            if (save()) {
+                System.out.println("Save Transaction successfully!");
+            }
         }
     }
 
@@ -52,5 +57,15 @@ public class TransactionController {
         }
 
         return resultList; // Trả về danh sách kết quả (nếu không tìm thấy, danh sách sẽ trống)
+    }
+    
+    public boolean save() {
+        try {
+            IFileReadWrite<Transaction, SinglyLinkedList<Transaction>> file = new TransactionReadWrite();
+            file.write(transactionHistory);
+        } catch (Exception e) {
+            return false;
+        }
+        return true; 
     }
 }
