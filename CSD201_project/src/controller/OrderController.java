@@ -2,45 +2,25 @@ package controller;
 
 import model.Order;
 import model.OrderItem;
-import model.InventoryItem;
 import structures.LinkedList;
-import structures.InventoryPriorityQueue;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
-import java.util.HashMap;
+import java.util.Comparator;
 import java.util.List;
-import model.Transaction;
 import structures.OrderPriorityQueue;
 
 public class OrderController {
 
     private final List<Order> allOrdersList;
-    private final HashMap<String, InventoryItem> globalInventoryMap;
-    private final InventoryPriorityQueue globalExpiryHeap;
+    private final InventoryItemController inventoryController;
     private final OrderPriorityQueue waitingOrderFEFOQueue;
-    private final TransactionController tranController;
 
     public OrderController(List<Order> allOrdersList,
-            HashMap<String, InventoryItem> globalInventoryMap,
-            InventoryPriorityQueue globalExpiryHeap,
+            InventoryItemController inventoryController,
             TransactionController transactionController) {
         this.allOrdersList = allOrdersList;
-        this.globalInventoryMap = globalInventoryMap;
-        this.globalExpiryHeap = globalExpiryHeap;
+        this.inventoryController = inventoryController;
         this.waitingOrderFEFOQueue = new OrderPriorityQueue();
-        this.tranController = transactionController;
-    }
-
-    public void initializeData(List<Order> loadedOrders) {
-        allOrdersList.clear();
-        LocalDateTime now = LocalDateTime.now();
-        for (Order order : loadedOrders) {
-            if (!order.getStatus().equals("Completed") && !order.getStatus().equals("Delivery") && order.getLatestDate().isBefore(now)) {
-                order.setStatus("Cancel");
-                System.out.println("System: Auto-Cancelled overdue order [" + order.getOrderId() + "] during setup.");
-            }
-            allOrdersList.add(order);
-        }
     }
 
     public boolean registerNewOrder(Order newOrder) {
@@ -54,45 +34,26 @@ public class OrderController {
         return true;
     }
 
+    // Lấy đủ hàng hoặc không lấy gì cả
     private boolean tryAtomicReservation(Order order) {
         LinkedList<OrderItem> requiredItems = order.getItemsToPick();
 
+        // Check đủ hàng cho tất cả SKU trước
         for (int i = 0; i < requiredItems.size(); i++) {
             OrderItem orderItem = requiredItems.get(i);
-            InventoryItem batch = findBatchBySku(orderItem.getSku());
-            if (batch == null || batch.getQuantity() < orderItem.getQuantity()) {
+            if (!inventoryController.hasEnoughStock(orderItem.getSku(), orderItem.getQuantity())) {
                 System.out.println("-> [THẤT BẠI] Đơn " + order.getOrderId() + " không đủ hàng cho SKU [" + orderItem.getSku() + "]");
                 return false;
             }
         }
 
+        // Đủ hết -> trừ kho thật
         for (int i = 0; i < requiredItems.size(); i++) {
             OrderItem orderItem = requiredItems.get(i);
-            InventoryItem batch = findBatchBySku(orderItem.getSku());
-            batch.setQuantity(batch.getQuantity() - orderItem.getQuantity());
-
-            String txId = "TX-" + batch.getBatchId();
-            Transaction newTx = new Transaction(txId, order.getOrderId(), "EXPORT",
-                    batch.getSku(), batch.getBatchId(), orderItem.getQuantity(), LocalDateTime.now());
-            tranController.addTransaction(newTx);
-
-            if (batch.getQuantity() == 0) {
-                globalInventoryMap.remove(batch.getBatchId());
-            }
+            inventoryController.deductStock(orderItem.getSku(), orderItem.getQuantity(), order.getOrderId());
         }
 
-        globalExpiryHeap.clear();
-        globalExpiryHeap.addAll(globalInventoryMap.values());
         return true;
-    }
-
-    private InventoryItem findBatchBySku(String sku) {
-        for (InventoryItem item : globalInventoryMap.values()) {
-            if (item.getSku().trim().equalsIgnoreCase(sku.trim())) {
-                return item;
-            }
-        }
-        return null;
     }
 
     public boolean updateOrderStatusManual(String orderId, String newStatus) {
@@ -164,6 +125,7 @@ public class OrderController {
                 activeOrders.add(order);
             }
         }
+        activeOrders.sort(Comparator.comparing(Order::getCreatedDate));
         return activeOrders;
     }
 

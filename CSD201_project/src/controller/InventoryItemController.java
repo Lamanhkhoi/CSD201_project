@@ -219,4 +219,47 @@ public class InventoryItemController {
     public List<InventoryBatch> getAllBatchesForSave() {
         return new ArrayList<>(batchMap.values());
     }
+
+    /*
+        Phần code thêm của Lâm
+        Hỗ trợ xuất hàng bên OrderController
+     */
+    
+    // Kiểm tra sl hàng
+    public boolean hasEnoughStock(String sku, int quantity) {
+        InventoryBatch batch = findBatchBySku(sku);
+        return batch != null && batch.getTotalQuantity() >= quantity;
+    }
+
+    // Trừ kho theo FEFO, hết lot thì xóa lot
+    public boolean deductStock(String sku, int quantity, String orderId) {
+        InventoryBatch batch = findBatchBySku(sku);
+        if (batch == null || batch.getTotalQuantity() < quantity) {
+            return false;
+        }
+
+        int remaining = quantity;
+        while (remaining > 0) {
+            InventoryItem earliestLot = batch.peekEarliestLot();
+            int lotQty = earliestLot.getQuantity();
+
+            if (lotQty <= remaining) {
+                batch.dequeueEarliestLot();
+                remaining -= lotQty;
+                logExportTransaction(sku, earliestLot.getSlotId(), lotQty, orderId);
+            } else {
+                earliestLot.setQuantity(lotQty - remaining);
+                logExportTransaction(sku, earliestLot.getSlotId(), remaining, orderId);
+                remaining = 0;
+            }
+        }
+        return true;
+    }
+    
+    // Ghi transaction xuất kho
+    private void logExportTransaction(String sku, String slotId, int quantity, String orderId) {
+        String txId = "TX-EXP-" + System.currentTimeMillis() + "-" + slotId;
+        Transaction newTx = new Transaction(txId, orderId, "EXPORT", sku, slotId, quantity, LocalDateTime.now());
+        transactionController.addTransaction(newTx);
+    }
 }

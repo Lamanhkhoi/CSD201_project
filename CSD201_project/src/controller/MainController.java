@@ -3,16 +3,10 @@ package controller;
 import model.*;
 import fileio.*;
 import structures.SinglyLinkedList;
-import structures.InventoryPriorityQueue;
-import structures.OrderPriorityQueue;
-import structures.SlotPriorityQueue;
 import utilities.StorageHandler;
-
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
-
-
 
 public class MainController {
 
@@ -22,8 +16,6 @@ public class MainController {
     private HashMap<String, String> skuToBatchId;
     private List<InventoryBatch> loadedInventoryBatches;
     private List<Order> allOrdersList;
-    private HashMap<String, Order> orderLookupMap;
-    private OrderPriorityQueue waitingOrderFEFOQueue;
     private SinglyLinkedList<Transaction> transactionHistory;
 
     // 2. Các File IO Handlers độc lập
@@ -49,9 +41,7 @@ public class MainController {
         this.inventoryBatchMap = new HashMap<>();
         this.skuToBatchId = new HashMap<>();
         this.allOrdersList = new ArrayList<>();
-        this.orderLookupMap = new HashMap<>();
         this.transactionHistory = new SinglyLinkedList<>();
-
 
         // Khởi tạo tầng Đọc/Ghi file vật lý
         this.productFileIO = new ProductReadWrite();
@@ -73,7 +63,7 @@ public class MainController {
         this.transactionController = new TransactionController(this.transactionHistory);
         this.inventoryController = new InventoryItemController(this.inventoryBatchMap, this.skuToBatchId, this.transactionController);
         this.inventoryController.initializeFromLoadedData(this.loadedInventoryBatches);
-        this.orderController = new OrderController(this.allOrdersList, this.inventoryMap, this.expiryHeap, this.transactionController);
+        this.orderController = new OrderController(this.allOrdersList, this.inventoryController, this.transactionController);
     }
 
     private void loadAllSystemData() {
@@ -85,8 +75,8 @@ public class MainController {
         }
 
         try {
-            this.loadedInventoryBatches  = inventoryFileIO.read();
-            
+            this.loadedInventoryBatches = inventoryFileIO.read();
+
             System.out.println("System Core: Tải dữ liệu tồn kho thành công.");
         } catch (Exception e) {
             System.out.println("System Core Warning: Lỗi tải file tồn kho: " + e.getMessage());
@@ -94,12 +84,6 @@ public class MainController {
 
         try {
             this.allOrdersList = orderFileHandler.read();
-            for (Order o : this.allOrdersList) {
-                this.orderLookupMap.put(o.getOrderId(), o);
-                if (o.getStatus().equalsIgnoreCase("Waiting") || o.getStatus().equalsIgnoreCase("Pending")) {
-                    this.waitingOrderFEFOQueue.enqueue(o);
-                }
-            }
             System.out.println("System Core: Tải dữ liệu đơn hàng thành công.");
         } catch (Exception e) {
             System.out.println("System Core Warning: Lỗi tải file đơn hàng: " + e.getMessage());

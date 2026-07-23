@@ -124,7 +124,7 @@ public class OrderView {
 
         Order newOrder = new Order(orderId, name, phone, address,
                 LocalDateTime.now(), expected.atStartOfDay(), latest.atStartOfDay(),
-                "Pending", totalAmount, itemsList, true);
+                "Ready", totalAmount, itemsList, true);
 
         boolean success = orderController.registerNewOrder(newOrder);
         if (!success) {
