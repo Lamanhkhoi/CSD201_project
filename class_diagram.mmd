@@ -1,0 +1,260 @@
+classDiagram
+    direction TB
+
+    %% Level 1: Models & Base Structures
+    class Product {
+        -String sku
+        -String name
+        -String category
+        -String supplier
+        -double price
+        +getSku() String
+        +getName() String
+        +getPrice() double
+    }
+    class OrderItem {
+        -String sku
+        -int quantity
+    }
+    class Order {
+        -String orderId
+        -String customerName
+        -String phone
+        -String address
+        -LocalDate createdDate
+        -LocalDate expectedDate
+        -LocalDate latestDate
+        -String status
+        -boolean isActive
+        -LinkedList~OrderItem~ itemsToPick
+    }
+    class InventoryItem {
+        -String slotId
+        -int quantity
+        -LocalDate receiveDate
+        -LocalDate expiryDate
+        +getSlotId() String
+        +getQuantity() int
+        +getExpiryDate() LocalDate
+    }
+    class InventoryBatch {
+        -String batchId
+        -String sku
+        -SlotPriorityQueue slots
+        -int slotSequence
+        +addLot(quantity, receiveDate, expiryDate) InventoryItem
+        +peekEarliestLot() InventoryItem
+        +dequeueEarliestLot() InventoryItem
+        +getTotalQuantity() int
+    }
+    class Transaction {
+        -String transactionId
+        -String orderId
+        -String type
+        -String sku
+        -String slotId
+        -int quantity
+        -LocalDateTime timestamp
+    }
+
+    %% Custom Data Structures
+    class SinglyLinkedList~E~ {
+        -Node~E~ head
+        -Node~E~ tail
+        -int size
+        +addFirst(E)
+        +addLast(E)
+        +removeFirst() E
+        +toFileString() String
+    }
+    class LinkedList~E~ {
+        -Node~E~ head
+        -Node~E~ tail
+        -int size
+        +addFirst(E)
+        +addLast(E)
+        +get(index) E
+    }
+    class SlotPriorityQueue {
+        -Node head
+        -int size
+        +enqueue(InventoryItem)
+        +dequeueMin() InventoryItem
+        +removeById(SlotId) boolean
+        +toList() List~InventoryItem~
+    }
+    class InventoryPriorityQueue {
+        -Node head
+        -int size
+        +enqueue(InventoryItem)
+        +dequeueMin() InventoryItem
+        +peek() InventoryItem
+    }
+    class OrderPriorityQueue {
+        -Node head
+        -int size
+        +enqueue(Order)
+        +dequeueMin() Order
+        +peek() Order
+    }
+
+    %% File IO & Storage
+    class StorageHandler~T, C~ {
+        -IFileReadWrite~T, C~ fileHandler
+        +askAndSave(C) boolean
+    }
+    class IFileReadWrite~E, C~ {
+        <<interface>>
+        +read() C
+        +write(C) boolean
+    }
+    class ProductReadWrite {
+        +read() SinglyLinkedList~Product~
+        +write(SinglyLinkedList) boolean
+    }
+    class InventoryItemReadWrite {
+        +read() List~InventoryBatch~
+        +write(List) boolean
+    }
+    class OrderReadWrite {
+        +read() List~Order~
+        +write(List) boolean
+    }
+    class TransactionReadWrite {
+        +read() SinglyLinkedList~Transaction~
+        +write(SinglyLinkedList) boolean
+    }
+
+    %% Utilities
+    class Inputter {
+        +getString() String
+        +getInt() int
+        +getLocalDate() LocalDate
+    }
+    class Pattern {
+        +String SKU_PATTERN
+        +String DATE_PATTERN
+    }
+    class Menu {
+        +getChoice(Object[]) int
+    }
+
+    %% Entry & Controllers & Views
+    class Main {
+        +main(String[] args)
+    }
+    class MainController {
+        -SinglyLinkedList~Product~ productList
+        -HashMap~String, InventoryBatch~ inventoryBatchMap
+        -List~Order~ allOrdersList
+        -SinglyLinkedList~Transaction~ transactionHistory
+        +loadAllSystemData()
+        +saveProducts() boolean
+        +saveInventory() boolean
+        +saveOrders() boolean
+        +saveTransactions() boolean
+    }
+    class ProductController {
+        -SinglyLinkedList~Product~ productList
+        +addProduct(Product)
+        +findProductBySku(String) Product
+    }
+    class OrderController {
+        -List~Order~ allOrdersList
+        -OrderPriorityQueue waitingOrderFEFOQueue
+        +registerNewOrder(Order) boolean
+        +completeNextOrder() String
+    }
+    class InventoryItemController {
+        -HashMap~String, InventoryBatch~ batchMap
+        -HashMap~String, String~ skuToBatchId
+        +receiveStock(sku, quantity, receiveDate, expiryDate)
+        +moveSkuToBatch(sku, targetBatchId) boolean
+        +deductStock(sku, quantity, orderId) boolean
+        +hasEnoughStock(sku, quantity) boolean
+    }
+    class TransactionController {
+        -SinglyLinkedList~Transaction~ transactionHistory
+        +addTransaction(Transaction)
+        +getAllTransactions() SinglyLinkedList
+    }
+    class ProductView {
+        +displaySubMenu()
+    }
+    class InventoryView {
+        +displaySubMenu()
+    }
+    class OrderView {
+        +displaySubMenu()
+    }
+    class TransactionView {
+        +displaySubMenu()
+    }
+
+    %% ALL RELATIONSHIPS (Nối toàn bộ liên kết - KHÔNG ĐỂ LỚP MỒ CÔI)
+
+    %% Utilities & UI Connections
+    Inputter --> Pattern : sử dụng Regex
+    Menu <-- Main : gọi hiển thị
+    ProductView --> Inputter : nhập dữ liệu
+    InventoryView --> Inputter : nhập dữ liệu
+    OrderView --> Inputter : nhập dữ liệu
+    TransactionView --> Inputter : nhập dữ liệu
+    ProductView --> Menu : hiển thị menu con
+    InventoryView --> Menu : hiển thị menu con
+    OrderView --> Menu : hiển thị menu con
+    TransactionView --> Menu : hiển thị menu con
+
+    %% Entry & Views to MainController
+    Main --> MainController : khởi tạo & điều phối
+    Main --> ProductView
+    Main --> InventoryView
+    Main --> OrderView
+    Main --> TransactionView
+
+    ProductView --> MainController
+    ProductView --> ProductController
+    InventoryView --> MainController
+    InventoryView --> InventoryItemController
+    OrderView --> MainController
+    OrderView --> OrderController
+    TransactionView --> MainController
+    TransactionView --> TransactionController
+
+    %% MainController Connections
+    MainController *-- ProductController
+    MainController *-- OrderController
+    MainController *-- InventoryItemController
+    MainController *-- TransactionController
+    MainController *-- SinglyLinkedList~Product~ : lưu trữ sản phẩm
+    MainController *-- SinglyLinkedList~Transaction~ : lưu trữ giao dịch
+
+    %% File IO Connections
+    ProductReadWrite ..|> IFileReadWrite
+    InventoryItemReadWrite ..|> IFileReadWrite
+    OrderReadWrite ..|> IFileReadWrite
+    TransactionReadWrite ..|> IFileReadWrite
+    StorageHandler --> IFileReadWrite
+    MainController --> ProductReadWrite
+    MainController --> InventoryItemReadWrite
+    MainController --> OrderReadWrite
+    MainController --> TransactionReadWrite
+
+    %% Controllers to Models & Structures
+    ProductController o-- Product : quản lý các sản phẩm
+    OrderController o-- Order : quản lý các đơn hàng
+    OrderController *-- OrderPriorityQueue : xếp hàng đợi xử lý
+    OrderController --> InventoryItemController : trừ kho khi duyệt đơn
+    OrderController --> TransactionController : tạo giao dịch xuất kho
+
+    InventoryItemController o-- InventoryBatch : quản lý các ngăn tủ
+    InventoryItemController --> TransactionController : tạo giao dịch nhập/xuất
+    
+    TransactionController o-- Transaction : quản lý lịch sử giao dịch
+
+    %% Models to Sub-models & Data Structures
+    Order "1" *-- "*" OrderItem : chứa danh mục mặt hàng
+    Order "1" *-- "1" LinkedList~OrderItem~ : lưu danh sách item
+    InventoryBatch "1" *-- "1" SlotPriorityQueue : lưu hàng đợi slot
+    SlotPriorityQueue "1" o-- "*" InventoryItem : xếp lô theo FEFO
+    InventoryPriorityQueue "1" o-- "*" InventoryItem : sắp xếp tồn kho
