@@ -193,7 +193,7 @@ public class PerformanceBenchmark {
             llQueue1.enqueue(item);
         }
         long endLL_Insert = System.nanoTime();
-        double timeLL_Insert_Ms = (endLL_Insert - startLL_Insert) / 1_000_000.0;
+        double timeLL_Insert_Ms = (endLL_Insert - startLL_Insert) / 10000000.0;
 
         BinaryMinHeapPriorityQueue heapQueue1 = new BinaryMinHeapPriorityQueue(N);
         long startHeap_Insert = System.nanoTime();
@@ -201,7 +201,7 @@ public class PerformanceBenchmark {
             heapQueue1.enqueue(item);
         }
         long endHeap_Insert = System.nanoTime();
-        double timeHeap_Insert_Ms = (endHeap_Insert - startHeap_Insert) / 1_000_000.0;
+        double timeHeap_Insert_Ms = (endHeap_Insert - startHeap_Insert) / 1000000.0;
 
         // ---------------------------------------------------------------------
         // KỊCH BẢN 2: BULK DEQUEUE (Xuất kho hàng loạt N phần tử FEFO)
@@ -211,14 +211,14 @@ public class PerformanceBenchmark {
             llQueue1.dequeueMin();
         }
         long endLL_Delete = System.nanoTime();
-        double timeLL_Delete_Ms = (endLL_Delete - startLL_Delete) / 1_000_000.0;
+        double timeLL_Delete_Ms = (endLL_Delete - startLL_Delete) / 1000000.0;
 
         long startHeap_Delete = System.nanoTime();
         while (!heapQueue1.isEmpty()) {
             heapQueue1.dequeueMin();
         }
         long endHeap_Delete = System.nanoTime();
-        double timeHeap_Delete_Ms = (endHeap_Delete - startHeap_Delete) / 1_000_000.0;
+        double timeHeap_Delete_Ms = (endHeap_Delete - startHeap_Delete) / 1000000.0;
 
         // ---------------------------------------------------------------------
         // KỊCH BẢN 3: MIXED WORKLOAD (50% Nhập / 50% Xuất kho thực tế)
@@ -234,7 +234,7 @@ public class PerformanceBenchmark {
             }
         }
         long endLL_Mixed = System.nanoTime();
-        double timeLL_Mixed_Ms = (endLL_Mixed - startLL_Mixed) / 1_000_000.0;
+        double timeLL_Mixed_Ms = (endLL_Mixed - startLL_Mixed) / 10000000.0;
 
         long startHeap_Mixed = System.nanoTime();
         for (int i = 0; i < dataset.size(); i++) {
@@ -244,7 +244,7 @@ public class PerformanceBenchmark {
             }
         }
         long endHeap_Mixed = System.nanoTime();
-        double timeHeap_Mixed_Ms = (endHeap_Mixed - startHeap_Mixed) / 1_000_000.0;
+        double timeHeap_Mixed_Ms = (endHeap_Mixed - startHeap_Mixed) / 1000000.0;
 
         // IN KẾT QUẢ
         if (printResult) {
