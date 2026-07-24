@@ -88,7 +88,17 @@ public class InventoryView {
 
         int quantity = Inputter.inputInt("Nhập số lượng: ");
         LocalDate receiveDate = LocalDate.now(); // Tự động lấy ngày hệ thống làm ngày nhập kho
-        LocalDate expiryDate = Inputter.inputDate("Nhập ngày hết hạn (dd/MM/yyyy): ");
+        LocalDate expiryDate;
+        while (true) {
+            expiryDate = Inputter.inputDate("Nhập ngày hết hạn (dd/MM/yyyy): ");
+
+            if (!expiryDate.isAfter(receiveDate)) {
+                System.out.println("-> [Lỗi] Ngày hết hạn phải SAU ngày hôm nay (" + receiveDate
+                        + ") - không thể nhập hàng đã hết hạn ngay từ đầu.");
+                continue;
+            }
+            break;
+        }
 
         boolean success = inventoryController.receiveStock(sku, quantity, receiveDate, expiryDate);
 

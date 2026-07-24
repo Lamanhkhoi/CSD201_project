@@ -38,7 +38,10 @@ public class InventoryItemController {
 
     // Gọi 1 lần sau khi đọc xong dữ liệu từ file: dựng lại skuToBatchId và khôi phục batchSequence
     public void initializeFromLoadedData(List<InventoryBatch> loadedBatches) {
+        LocalDate today = LocalDate.now();
+
         for (InventoryBatch batch : loadedBatches) {
+            removeExpiredLots(batch, today);
             batchMap.put(batch.getBatchId(), batch);
             skuToBatchId.put(batch.getSku(), batch.getBatchId());
             updateBatchSequenceFromId(batch.getBatchId());
@@ -121,6 +124,7 @@ public class InventoryItemController {
         InventoryBatch oldBatch = batchMap.get(oldBatchId);
         InventoryBatch targetBatch = new InventoryBatch(targetBatchId, sku);
         batchMap.put(targetBatchId, targetBatch);
+        updateBatchSequenceFromId(targetBatchId);
 
         // Chuyển toàn bộ lô hàng con sang ngăn tủ mới - GIỮ NGUYÊN slotId cũ để không mất truy vết lịch sử
         for (InventoryItem lot : oldBatch.getAllLots()) {
@@ -224,7 +228,6 @@ public class InventoryItemController {
         Phần code thêm của Lâm
         Hỗ trợ xuất hàng bên OrderController
      */
-    
     // Kiểm tra sl hàng
     public boolean hasEnoughStock(String sku, int quantity) {
         InventoryBatch batch = findBatchBySku(sku);
@@ -254,6 +257,15 @@ public class InventoryItemController {
             }
         }
         return true;
+    }
+
+    private void removeExpiredLots(InventoryBatch batch, LocalDate today) {
+        for (InventoryItem slot : batch.getAllLots()) {
+            if (!slot.getExpiryDate().isAfter(today)) {
+                batch.removeLotById(slot.getSlotId());
+                System.out.println("-> [Cảnh báo] Lô " + slot.getSlotId() + " (SKU " + batch.getSku()+ ") đã hết hạn (" + slot.getExpiryDate() + ") - không nạp vào hệ thống đang chạy.");
+            }
+        }
     }
     
     // Ghi transaction xuất kho
