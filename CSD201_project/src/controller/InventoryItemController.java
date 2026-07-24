@@ -12,15 +12,6 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 
-/*
- Controller quản lý tồn kho theo thiết kế "ngăn tủ" (batchId <-> sku là 1-1):
- - batchMap: tra cứu O(1) theo batchId -> InventoryBatch. Một batchId tồn tại
-   trong map nghĩa là nó đang active - KHÔNG còn khái niệm xóa mềm/free-list,
-   xóa là gỡ hẳn khỏi map (xóa cứng).
- - skuToBatchId: reverse-index O(1) để biết 1 SKU đang nằm ở batchId nào.
- - batchSequence: bộ đếm sinh batchId mới (BAT001, BAT002...), chỉ tăng dần,
-   không bao giờ tái sử dụng số cũ.
- */
 public class InventoryItemController {
 
     private final HashMap<String, InventoryBatch> batchMap;
@@ -48,7 +39,6 @@ public class InventoryItemController {
         }
     }
 
-    // Trích số thứ tự từ batchId (VD: "BAT007" -> 7) để cập nhật batchSequence nếu lớn hơn giá trị hiện có
     private void updateBatchSequenceFromId(String batchId) {
         try {
             String numberPart = batchId.replaceAll("[^0-9]", "");
@@ -59,19 +49,15 @@ public class InventoryItemController {
                 }
             }
         } catch (NumberFormatException e) {
-            // batchId không đúng định dạng tự sinh (VD: nhập tay khác chuẩn) -> bỏ qua
         }
     }
 
-    // Luôn sinh batchId hoàn toàn mới - không còn free-list để tái sử dụng
     private String generateNewBatchId() {
         batchSequence++;
         return String.format("BAT%03d", batchSequence);
     }
 
-    // ==============================================================
-    // 1. NHẬP KHO
-    // ==============================================================
+    // Nhập kho
     public boolean receiveStock(String sku, int quantity, LocalDate receiveDate, LocalDate expiryDate) {
         String batchId = skuToBatchId.get(sku);
         InventoryBatch batch;
@@ -98,11 +84,8 @@ public class InventoryItemController {
         return true;
     }
 
-    // ==============================================================
-    // 2. CẬP NHẬT VỊ TRÍ (dời SKU sang ngăn tủ khác)
-    // ==============================================================
+    // Cập nhật vị trí (dời SKU sang ngăn tủ khác)
     /*
-     Ngăn tủ đích hợp lệ khi CHƯA TỒN TẠI trong batchMap (sẽ được tạo mới).
      Nếu đã tồn tại nghĩa là đang có SKU khác chiếm -> từ chối.
      */
     public boolean moveSkuToBatch(String sku, String targetBatchId) {
@@ -140,9 +123,7 @@ public class InventoryItemController {
         return true;
     }
 
-    // ==============================================================
-    // 3. XÓA (cứng) - chỉ khi tổng số lượng trong ngăn tủ bằng 0
-    // ==============================================================
+    // XÓa (cứng) - chỉ khi tổng số lượng trong ngăn tủ bằng 0
     public boolean deleteBySku(String sku) {
         String batchId = skuToBatchId.get(sku);
         if (batchId == null) {
@@ -164,9 +145,7 @@ public class InventoryItemController {
         return true;
     }
 
-    // ==============================================================
-    // 4. CÁC HÀM TRA CỨU / HIỂN THỊ
-    // ==============================================================
+    // Các hàm tra cứu / hiển thị
     public InventoryBatch findBatchBySku(String sku) {
         String batchId = skuToBatchId.get(sku);
         if (batchId == null) {
@@ -190,7 +169,7 @@ public class InventoryItemController {
         return result;
     }
 
-    // Sắp theo hạn sử dụng GẦN NHẤT hiện có trong từng ngăn tủ (lô đầu hàng đợi FEFO của batch đó)
+    // Sắp theo hạn sử dụng GẦN NHẤT hiện có trong từng ngăn tủ 
     public List<InventoryBatch> getBatchesSortedByEarliestExpiry() {
         List<InventoryBatch> list = getAllActiveBatches();
         Collections.sort(list, new Comparator<InventoryBatch>() {
@@ -222,6 +201,16 @@ public class InventoryItemController {
     // Dùng cho MainController khi cần lưu toàn bộ batch xuống file
     public List<InventoryBatch> getAllBatchesForSave() {
         return new ArrayList<>(batchMap.values());
+    }
+    
+    // kiểm tra lô có hết hạn lúc nhập dữ liệu
+    private void removeExpiredLots(InventoryBatch batch, LocalDate today) {
+        for (InventoryItem slot : batch.getAllLots()) {
+            if (!slot.getExpiryDate().isAfter(today)) {
+                batch.removeLotById(slot.getSlotId());
+                System.out.println("-> [Cảnh báo] Lô " + slot.getSlotId() + " (SKU " + batch.getSku() + ") đã hết hạn (" + slot.getExpiryDate() + ") - không nạp vào hệ thống đang chạy.");
+            }
+        }
     }
 
     /*
@@ -259,15 +248,6 @@ public class InventoryItemController {
         return true;
     }
 
-    private void removeExpiredLots(InventoryBatch batch, LocalDate today) {
-        for (InventoryItem slot : batch.getAllLots()) {
-            if (!slot.getExpiryDate().isAfter(today)) {
-                batch.removeLotById(slot.getSlotId());
-                System.out.println("-> [Cảnh báo] Lô " + slot.getSlotId() + " (SKU " + batch.getSku()+ ") đã hết hạn (" + slot.getExpiryDate() + ") - không nạp vào hệ thống đang chạy.");
-            }
-        }
-    }
-    
     // Ghi transaction xuất kho
     private void logExportTransaction(String sku, String slotId, int quantity, String orderId) {
         String txId = "TX-EXP-" + System.currentTimeMillis() + "-" + slotId;
