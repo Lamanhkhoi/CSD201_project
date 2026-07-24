@@ -10,7 +10,7 @@ import java.util.List;
 
 public class MainController {
 
-    // 1. Vùng lưu trữ dữ liệu tập trung toàn hệ thống trên RAM
+    // Vùng lưu trữ dữ liệu tập trung toàn hệ thống trên RAM
     private SinglyLinkedList<Product> productList;
     private HashMap<String, InventoryBatch> inventoryBatchMap;
     private HashMap<String, String> skuToBatchId;
@@ -18,19 +18,19 @@ public class MainController {
     private List<Order> allOrdersList;
     private SinglyLinkedList<Transaction> transactionHistory;
 
-    // 2. Các File IO Handlers độc lập
+    // Các File IO Handlers độc lập
     private final ProductReadWrite productFileIO;
     private final InventoryItemReadWrite inventoryFileIO;
     private final OrderReadWrite orderFileHandler;
     private final TransactionReadWrite tranFileHandler;
 
-    // 3. StorageHandlers
+    // StorageHandlers
     private final StorageHandler<Product, SinglyLinkedList<Product>> productStorage;
     private final StorageHandler<InventoryBatch, List<InventoryBatch>> inventoryStorage;
     private final StorageHandler<Order, List<Order>> orderStorage;
     private final StorageHandler<Transaction, SinglyLinkedList<Transaction>> tranStorage;
 
-    // 4. SubController
+    // SubController
     private final ProductController productController;
     private final InventoryItemController inventoryController;
     private final OrderController orderController;
@@ -43,22 +43,18 @@ public class MainController {
         this.allOrdersList = new ArrayList<>();
         this.transactionHistory = new SinglyLinkedList<>();
 
-        // Khởi tạo tầng Đọc/Ghi file vật lý
         this.productFileIO = new ProductReadWrite();
         this.inventoryFileIO = new InventoryItemReadWrite();
         this.orderFileHandler = new OrderReadWrite();
         this.tranFileHandler = new TransactionReadWrite();
 
-        // Khởi tạo các StorageHandler tương ứng
         this.productStorage = new StorageHandler<>(productFileIO);
         this.inventoryStorage = new StorageHandler<>(inventoryFileIO);
         this.orderStorage = new StorageHandler<>(orderFileHandler);
         this.tranStorage = new StorageHandler<>(tranFileHandler);
 
-        // Đọc toàn bộ dữ liệu từ các file văn bản lên RAM trước khi chạy SubController
         loadAllSystemData();
 
-        // Khởi tạo các SubController bằng cách TRUYỀN THAM CHIẾU DATA VÀO CONSTRUCTOR
         this.productController = new ProductController(this.productList);
         this.transactionController = new TransactionController(this.transactionHistory);
         this.inventoryController = new InventoryItemController(this.inventoryBatchMap, this.skuToBatchId, this.transactionController);

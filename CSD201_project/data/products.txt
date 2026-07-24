@@ -1,2 +1,20 @@
-p123;MILK;th?c ph?m;Vinamilk;10000.0
-p001;cam;tr�i c�y;T�ng Beo;100000.0
+P001;Product1;Beverage;Vinamilk;12.0
+P002;Product2;Snack;Acecook;14.0
+P003;Product3;Dairy;CP;16.0
+P004;Product4;Frozen;TH;18.0
+P005;Product5;Fruit;Nestle;20.0
+P006;Product6;Vegetable;Unilever;22.0
+P007;Product7;Meat;CocaCola;24.0
+P008;Product8;Seafood;Orion;26.0
+P009;Product9;Beverage;Vinamilk;28.0
+P010;Product10;Snack;Acecook;30.0
+P011;Product11;Dairy;CP;32.0
+P012;Product12;Frozen;TH;34.0
+P013;Product13;Fruit;Nestle;36.0
+P014;Product14;Vegetable;Unilever;38.0
+P015;Product15;Meat;CocaCola;40.0
+P016;Product16;Seafood;Orion;42.0
+P017;Product17;Beverage;Vinamilk;44.0
+P018;Product18;Snack;Acecook;46.0
+P019;Product19;Dairy;CP;48.0
+P020;Product20;Frozen;TH;50.0

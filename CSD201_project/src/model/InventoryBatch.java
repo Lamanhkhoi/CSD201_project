@@ -1,15 +1,8 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 import java.time.LocalDate;
 import java.util.List;
 import structures.SlotPriorityQueue;
-/**
- *
- * @author Admin
- */
+
 public class InventoryBatch {
     private String batchId;
     private String sku;
@@ -47,9 +40,6 @@ public class InventoryBatch {
         this.slotSequence = slotSequence;
     }
 
-    /*
-    Thêm 1 lô hàng con mới vào batch. slotId được tự sinh tuần tự theo đúng batch (không dùng chung bộ đếm với batch khác).
-    */
     public InventoryItem addLot(int quantity, LocalDate receiveDate, LocalDate expiryDate) {
         slotSequence++;
         String slotId = String.format("%s-SLOT%03d", batchId, slotSequence);
@@ -58,34 +48,26 @@ public class InventoryBatch {
         return newLot;
     }
 
-    /*
-    Dùng khi đọc lại dữ liệu từ file: thêm 1 lô đã có sẵn slotId (không sinh slotId mới), tránh trường hợp đọc file lên lại tạo slotId khác với lúc ghi.
-     */
     public void addExistingLot(InventoryItem slot) {
         slots.enqueue(slot);
     }
 
-    // Xem lô hàng con có hạn sử dụng gần nhất (ưu tiên xuất trước - FEFO)
     public InventoryItem peekEarliestLot() {
         return slots.peek();
     }
 
-    // Lấy ra và xóa lô hàng con có hạn sử dụng gần nhất - dùng khi xuất trọn 1 lô
     public InventoryItem dequeueEarliestLot() {
         return slots.dequeueMin();
     }
 
-    // Gỡ đúng 1 lô hàng con theo slotId (dùng khi lô về 0, hoặc bị xóa)
     public boolean removeLotById(String lotId) {
         return slots.removeById(lotId);
     }
 
-    // Trả về toàn bộ lô hàng con trong batch, theo đúng thứ tự FEFO hiện có
     public List<InventoryItem> getAllLots() {
         return slots.toList();
     }
 
-    // Tổng số lượng còn lại trong toàn bộ batch (cộng dồn tất cả lô con)
     public int getTotalQuantity() {
         int total = 0;
         for (InventoryItem lot : slots.toList()) {
@@ -94,7 +76,6 @@ public class InventoryBatch {
         return total;
     }
 
-    // Batch được xem là trống khi không còn lô hàng con nào
     public boolean isEmpty() {
         return slots.isEmpty();
     }

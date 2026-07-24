@@ -62,9 +62,7 @@ public class InventoryView {
         }
     }
 
-    // =========================================================
-    // 1. NHẬP KHO THEO SKU (không còn nhập batchId/vị trí kệ tay - hệ thống tự cấp ngăn tủ)
-    // =========================================================
+    // Nhập kho
     private void uiReceiveStock() {
         System.out.println("\n--- NHẬP KHO ---");
 
@@ -87,7 +85,7 @@ public class InventoryView {
         }
 
         int quantity = Inputter.inputInt("Nhập số lượng: ");
-        LocalDate receiveDate = LocalDate.now(); // Tự động lấy ngày hệ thống làm ngày nhập kho
+        LocalDate receiveDate = LocalDate.now();
         LocalDate expiryDate;
         while (true) {
             expiryDate = Inputter.inputDate("Nhập ngày hết hạn (dd/MM/yyyy): ");
@@ -107,9 +105,7 @@ public class InventoryView {
         }
     }
 
-    // =========================================================
-    // 2. DỜI SKU SANG NGĂN TỦ KHÁC (thay cho "dời vị trí kệ" cũ)
-    // =========================================================
+    // Dời batch
     private void uiMoveBatch() {
         System.out.println("\n--- DỜI SKU SANG NGĂN TỦ KHÁC ---");
         String sku = Inputter.inputStr("Nhập mã SKU cần dời: ").toUpperCase();
@@ -127,9 +123,7 @@ public class InventoryView {
         }
     }
 
-    // =========================================================
-    // 3. XÓA MỀM SKU (chỉ khi tổng số lượng = 0)
-    // =========================================================
+    // Xóa mềm
     private void uiDeleteSku() {
         System.out.println("\n--- XÓA SKU KHỎI KHO ---");
         String sku = Inputter.inputStr("Nhập mã SKU cần xóa: ").toUpperCase();
@@ -141,9 +135,7 @@ public class InventoryView {
         }
     }
 
-    // =========================================================
-    // 4. TÌM KIẾM THEO SKU (batchId <-> sku giờ là 1-1 nên không còn tìm nhiều batch cho 1 SKU)
-    // =========================================================
+    // Tìm kiếm theo SKU
     private void uiSearchStock() {
         System.out.println("\n--- TÌM KIẾM THEO SKU ---");
         String sku = Inputter.inputStr("Nhập mã SKU cần tìm: ").toUpperCase();
@@ -157,9 +149,7 @@ public class InventoryView {
         printBatchDetail(batch);
     }
 
-    // =========================================================
-    // 5. CẢNH BÁO CẬN DATE
-    // =========================================================
+    // Cảnh báo hết hạn
     private void uiExpiryAlerts() {
         System.out.println("\n--- CẢNH BÁO HÀNG CẬN DATE / HẾT HẠN ---");
         int daysThreshold = Inputter.inputInt("Nhập số ngày ngưỡng để cảnh báo (Ví dụ: 30): ");
@@ -177,9 +167,7 @@ public class InventoryView {
         }
     }
 
-    // =========================================================
-    // 6. HIỂN THỊ VÀ SẮP XẾP
-    // =========================================================
+    // Hiển thị và sắp xếp
     private void uiDisplayAndSort() {
         System.out.println("\n--- HIỂN THỊ & SẮP XẾP TỒN KHO ---");
         System.out.println("1. Hiển thị mặc định");

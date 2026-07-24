@@ -1,21 +1,13 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package model;
 
 import java.time.LocalDate;
 
-/**
- *
- * @author LENOVO
- */
 public class InventoryItem{
 
     private String slotId;
     private int quantity;
-    private LocalDate receiveDate;  // Ngày nhập kho của riêng lô này
-    private LocalDate expiryDate;   // Ngày hết hạn của lô hàng    
+    private LocalDate receiveDate; 
+    private LocalDate expiryDate;   
 
     public InventoryItem() {
     }

@@ -6,11 +6,9 @@ public class Main {
 
     public static void main(String[] args) {
         System.out.println("=== KHỞI CHẠY HỆ THỐNG QUẢN LÝ KHO VÀ ĐƠN HÀNG CHUYÊN SÂU ===");
-
-        // 1. Khởi tạo bộ định tuyến trung tâm và nạp toàn bộ file dữ liệu lên RAM
+        
         MainController mainController = new MainController();
 
-        // 2. Khởi tạo các SubView và tiêm bộ điều khiển trung tâm vào
         ProductView productView = new ProductView(mainController, mainController.getProductController());
         InventoryView inventoryView = new InventoryView(mainController, mainController.getInventoryController());
         OrderView orderView = new OrderView(mainController, mainController.getOrderController());

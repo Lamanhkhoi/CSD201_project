@@ -166,8 +166,8 @@ public class PerformanceBenchmark {
 
         int[] sampleSizes = {100, 500, 1000, 10000};
 
-        // 1. JVM Warm-up (Khởi động JVM JIT compiler để đo chính xác)
-        System.out.println("[+] Đang chạy Warm-up JVM...");
+        // 1. Warm-up (Khởi động compiler để đo chính xác)
+        System.out.println("[+] Đang chạy Warm-up...");
         runBenchmarkSuite(50, false);
         System.out.println("[+] Warm-up hoàn tất! Bắt đầu đo chính thức.\n");
 
